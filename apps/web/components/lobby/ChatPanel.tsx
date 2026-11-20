@@ -18,7 +18,7 @@ export function ChatPanel({
 }) {
   const [text, setText] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
-  const pickerRef = useRef<HTMLDivElement>(null);
+  const pickerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!pickerOpen) return;
@@ -95,49 +95,51 @@ export function ChatPanel({
         </div>
       </div>
 
-      <form onSubmit={submit} className="relative flex gap-2 p-3" ref={pickerRef}>
-        <div className="relative min-w-0 flex-1">
-          <Input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Type a message"
-            maxLength={200}
-            className="pr-12"
-          />
-          <button
-            type="button"
-            className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-xl transition hover:bg-ink/5"
-            aria-label="Open emoji picker"
-            aria-expanded={pickerOpen}
-            onClick={() => setPickerOpen((v) => !v)}
-          >
-            😊
-          </button>
-          {pickerOpen && (
-            <div className="absolute bottom-[calc(100%+8px)] left-0 right-0 z-20 max-h-48 overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] p-2 shadow-soft">
-              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-slate">
-                All emojis
-              </p>
-              <div className="grid grid-cols-8 gap-1">
-                {CHAT_EMOJIS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    className="rounded-lg p-1.5 text-lg leading-none transition hover:scale-110 hover:bg-ink/5"
-                    onClick={() => insertEmoji(emoji)}
-                    aria-label={`Insert ${emoji}`}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
+      <div className="relative flex gap-2 p-3" ref={pickerRef}>
+        <form onSubmit={submit} className="flex min-w-0 flex-1 gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Type a message"
+              maxLength={200}
+              className="pr-12"
+            />
+            <button
+              type="button"
+              className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-xl transition hover:bg-ink/5"
+              aria-label="Open emoji picker"
+              aria-expanded={pickerOpen}
+              onClick={() => setPickerOpen((v) => !v)}
+            >
+              😊
+            </button>
+          </div>
+          <Button type="submit" size="sm" className="shrink-0 whitespace-nowrap">
+            Send
+          </Button>
+        </form>
+        {pickerOpen && (
+          <div className="absolute bottom-[calc(100%+8px)] left-3 right-3 z-20 max-h-48 overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] p-2 shadow-soft">
+            <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-slate">
+              All emojis
+            </p>
+            <div className="grid grid-cols-8 gap-1">
+              {CHAT_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  className="rounded-lg p-1.5 text-lg leading-none transition hover:scale-110 hover:bg-ink/5"
+                  onClick={() => insertEmoji(emoji)}
+                  aria-label={`Insert ${emoji}`}
+                >
+                  {emoji}
+                </button>
+              ))}
             </div>
-          )}
-        </div>
-        <Button type="submit" size="sm" className="shrink-0 whitespace-nowrap">
-          Send
-        </Button>
-      </form>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
