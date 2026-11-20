@@ -97,7 +97,7 @@ export function registerHandlers(
         const err = result.error;
         const messages: Record<typeof err, string> = {
           ROOM_NOT_FOUND:
-            "Room not found. Ask the host to stay in the lobby and send a fresh invite.",
+            "Room not found. Ask for a fresh invite — the old room may have expired.",
           ROOM_FULL: "That room is full.",
           GAME_UNAVAILABLE: "The game already started — ask the host for a new room.",
           NICKNAME_TAKEN: "That nickname is taken in this room. Try another.",

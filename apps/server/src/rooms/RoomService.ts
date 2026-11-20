@@ -113,6 +113,10 @@ export class RoomService {
       socketId,
       lastSeenAt: now,
     });
+    // If the creator fully left, the next joiner becomes host
+    if (!room.players.has(room.hostId)) {
+      room.hostId = playerId;
+    }
     room.updatedAt = now;
     return { room, playerId, membershipToken };
   }
@@ -187,13 +191,10 @@ export class RoomService {
       if (next) room.hostId = next.id;
     }
 
-    const anyConnected = [...room.players.values()].some((p) => p.connected);
-    // Explicit Leave: tear down empty rooms. Disconnect: keep for reconnect/invite grace.
-    if (!anyConnected && permanent) {
-      clearTimer(room);
-      room.state = "CLOSED";
-      this.store.delete(room.code);
-      return null;
+    // Keep the room either way (stay in lobby or leave) so invite links still work.
+    // cleanupIdle removes abandoned rooms after disconnectGraceMs / idle TTL.
+    if (room.state === "CLOSED") {
+      room.state = "WAITING";
     }
     room.updatedAt = Date.now();
     return room;
@@ -366,11 +367,13 @@ export class RoomService {
     for (const room of this.store.values()) {
       const idle = now - room.updatedAt > config.roomIdleTtlMs;
       const players = [...room.players.values()];
-      const noneConnected = !players.some((p) => p.connected);
+      const noneConnected =
+        players.length === 0 || !players.some((p) => p.connected);
       const lastSeen = players.reduce(
         (max, p) => Math.max(max, p.lastSeenAt),
         room.updatedAt
       );
+      // Empty / everyone gone: keep for grace so shared invite links still work
       const graceExpired =
         noneConnected && now - lastSeen > config.disconnectGraceMs;
       if (idle || graceExpired) {

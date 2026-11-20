@@ -46,6 +46,7 @@ export default function RoomPage() {
   const membership = useMemo(() => loadMembership(), []);
   const [retrying, setRetrying] = useState(false);
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
+  const [shareHint, setShareHint] = useState<string | null>(null);
 
   const self = useMemo(
     () => room?.players.find((p) => p.id === playerId),
@@ -165,10 +166,40 @@ export default function RoomPage() {
     try {
       await navigator.clipboard.writeText(inviteUrl(room!.code));
       setCopied("link");
-      setTimeout(() => setCopied(null), 1500);
+      setShareHint("Link copied — switch to WhatsApp, paste, then come back here.");
+      setTimeout(() => {
+        setCopied(null);
+        setShareHint(null);
+      }, 4000);
     } catch {
       // ignore
     }
+  }
+
+  async function shareInvite() {
+    const url = inviteUrl(room!.code);
+    const text = `Join my PartyVerse room ${room!.code}`;
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({ title: "PartyVerse", text, url });
+        setShareHint("Invite sent — stay on this page while friends join.");
+        setTimeout(() => setShareHint(null), 4000);
+        return;
+      }
+    } catch {
+      // user cancelled or share failed — fall through to copy
+    }
+    await copyLink();
+  }
+
+  function shareWhatsApp() {
+    const url = inviteUrl(room!.code);
+    const text = encodeURIComponent(
+      `Join my PartyVerse room ${room!.code}: ${url}`
+    );
+    window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+    setShareHint("WhatsApp opened — send the message, then return to this tab.");
+    setTimeout(() => setShareHint(null), 5000);
   }
 
   function switchMode() {
@@ -190,16 +221,8 @@ export default function RoomPage() {
               <Button size="sm" variant="ghost" onClick={copyCode}>
                 {copied === "code" ? "Copied" : "Copy code"}
               </Button>
-              <Button size="sm" variant="ghost" onClick={copyLink}>
-                {copied === "link" ? "Link copied" : "Copy invite link"}
-              </Button>
               <ConnectionPill status={connectionStatus} onRetry={retryConnect} />
             </div>
-            {isHost && inLobby && (
-              <p className="mt-2 text-xs text-slate">
-                Send the invite link to friends on WhatsApp / Messages.
-              </p>
-            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <ThemeToggle />
@@ -284,6 +307,31 @@ export default function RoomPage() {
                       for multiplayer (or Practice solo)
                     </p>
                   </div>
+                  {isHost && (
+                    <div className="rounded-[1.5rem] border border-coral/30 bg-coral/5 p-5">
+                      <h3 className="font-display text-lg font-bold text-ink">
+                        Invite friends
+                      </h3>
+                      <p className="mt-1 text-sm text-slate">
+                        Share the link — you can stay here or leave. The room stays
+                        open so friends can still join.
+                      </p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Button size="sm" onClick={shareInvite}>
+                          Share invite
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={shareWhatsApp}>
+                          WhatsApp
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={copyLink}>
+                          {copied === "link" ? "Link copied" : "Copy link"}
+                        </Button>
+                      </div>
+                      {shareHint && (
+                        <p className="mt-3 text-sm text-ink">{shareHint}</p>
+                      )}
+                    </div>
+                  )}
                   {isHost ? (
                     <GameSelect
                       playerCount={room.players.length}
