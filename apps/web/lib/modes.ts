@@ -56,6 +56,7 @@ export function clearPreferredMode() {
 }
 
 export function inviteUrl(code: string) {
-  if (typeof window === "undefined") return `/join?code=${code}`;
-  return `${window.location.origin}/join?code=${code}`;
+  const path = `/setup?code=${encodeURIComponent(code.toUpperCase())}`;
+  if (typeof window === "undefined") return path;
+  return `${window.location.origin}${path}`;
 }

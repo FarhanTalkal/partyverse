@@ -19,13 +19,16 @@ function JoinInner() {
   const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loadProfile()) {
-      const c = search.get("code");
-      router.replace(c ? `/setup?code=${c}` : "/setup");
+    const c = search.get("code")?.trim();
+    // Invite links always land on setup with code prefilled + Create hidden
+    if (c) {
+      router.replace(`/setup?code=${encodeURIComponent(c.toUpperCase())}`);
       return;
     }
-    const prefill = search.get("code");
-    if (prefill) setCode(prefill.toUpperCase());
+    if (!loadProfile()) {
+      router.replace("/setup");
+      return;
+    }
   }, [router, search]);
 
   async function onJoin() {

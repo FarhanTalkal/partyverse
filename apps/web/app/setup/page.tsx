@@ -24,8 +24,8 @@ function SetupInner() {
   const router = useRouter();
   const search = useSearchParams();
   const modeParam = search.get("mode");
-  const joinCode = search.get("code");
-  const focusJoin = search.get("focus") === "join";
+  const joinCode = search.get("code")?.trim().toUpperCase() || null;
+  const inviteJoin = Boolean(joinCode);
   const preferred =
     modeParam && GAME_MODES.includes(modeParam as GameMode)
       ? (modeParam as GameMode)
@@ -33,20 +33,24 @@ function SetupInner() {
 
   const { createRoom, joinRoom, connectionStatus, retryConnect } = useGameSocket();
   const [nickname, setNickname] = useState("");
-  const [avatar, setAvatar] = useState<AvatarId>("cat");
-  const [code, setCode] = useState("");
+  const [avatar, setAvatar] = useState<AvatarId | null>(inviteJoin ? null : "cat");
+  const [code, setCode] = useState(joinCode ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"create" | "join" | null>(null);
 
   useEffect(() => {
     const profile = loadProfile();
-    if (profile) {
+    if (inviteJoin) {
+      // Invitees must pick their own avatar (no default / saved avatar)
+      setAvatar(null);
+      if (profile?.nickname) setNickname(profile.nickname);
+    } else if (profile) {
       setNickname(profile.nickname);
       setAvatar(profile.avatar);
     }
-    if (joinCode) setCode(joinCode.toUpperCase());
+    if (joinCode) setCode(joinCode);
     if (preferred) savePreferredMode(preferred);
-  }, [preferred, joinCode]);
+  }, [preferred, joinCode, inviteJoin]);
 
   function validate() {
     const parsed = nicknameSchema.safeParse(nickname);
@@ -54,18 +58,22 @@ function SetupInner() {
       setError("Nickname must be 2–16 letters, numbers, spaces, - or _");
       return null;
     }
+    if (!avatar) {
+      setError("Pick an avatar to continue");
+      return null;
+    }
     saveProfile({ nickname: parsed.data, avatar });
     if (preferred) savePreferredMode(preferred);
-    return parsed.data;
+    return { name: parsed.data, avatar };
   }
 
   async function onCreate() {
-    const name = validate();
-    if (!name) return;
+    const valid = validate();
+    if (!valid) return;
     setBusy("create");
     setError(null);
     try {
-      const res = await createRoom(name, avatar);
+      const res = await createRoom(valid.name, valid.avatar);
       router.replace(`/room/${res.room.code}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not create room");
@@ -74,8 +82,8 @@ function SetupInner() {
   }
 
   async function onJoinDirect() {
-    const name = validate();
-    if (!name) return;
+    const valid = validate();
+    if (!valid) return;
     const parsed = roomCodeSchema.safeParse(code);
     if (!parsed.success) {
       setError("Enter a valid 6-character room code");
@@ -84,7 +92,7 @@ function SetupInner() {
     setBusy("join");
     setError(null);
     try {
-      const res = await joinRoom(parsed.data, name, avatar);
+      const res = await joinRoom(parsed.data, valid.name, valid.avatar);
       router.replace(`/room/${res.room.code}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not join room");
@@ -105,7 +113,7 @@ function SetupInner() {
           </div>
         </div>
         <h1 className="mt-8 font-display text-4xl font-extrabold tracking-tight text-ink">
-          Who&apos;s playing tonight?
+          {inviteJoin ? "You're invited" : "Who's playing tonight?"}
         </h1>
         {preferred && (
           <p className="mt-3 rounded-2xl border border-amber/40 bg-amber/10 px-4 py-3 text-sm text-ink">
@@ -114,7 +122,9 @@ function SetupInner() {
           </p>
         )}
         <p className="mt-3 text-slate">
-          Pick a nickname and avatar, then create or join a room.
+          {inviteJoin
+            ? "Choose your nickname and avatar, then join."
+            : "Pick a nickname and avatar, then create or join a room."}
         </p>
 
         <div className="mt-8 space-y-6 rounded-[1.75rem] pv-card p-6">
@@ -127,33 +137,36 @@ function SetupInner() {
               onChange={(e) => setNickname(e.target.value)}
               placeholder="Farhan"
               maxLength={16}
-              autoFocus={!focusJoin}
+              autoFocus
             />
           </label>
 
           <div>
             <span className="mb-2 block text-sm font-semibold text-ink">
-              Avatar
+              Avatar{inviteJoin ? " — pick one" : ""}
             </span>
             <AvatarPicker value={avatar} onChange={setAvatar} />
           </div>
 
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">
             <span className="mb-2 block text-sm font-semibold text-ink">
-              Join room directly
+              {inviteJoin ? "Room code" : "Join room directly"}
             </span>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Input
                 value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  if (!inviteJoin) setCode(e.target.value.toUpperCase());
+                }}
                 placeholder="ABC123"
                 maxLength={6}
                 className="tracking-[0.28em] sm:flex-1"
-                autoFocus={focusJoin}
+                readOnly={inviteJoin}
+                aria-readonly={inviteJoin}
               />
               <Button
-                className="shrink-0 whitespace-nowrap"
-                variant="secondary"
+                className={`shrink-0 whitespace-nowrap ${inviteJoin ? "sm:flex-1" : ""}`}
+                variant={inviteJoin ? "primary" : "secondary"}
                 disabled={busy !== null || connectionStatus === "offline"}
                 onClick={onJoinDirect}
               >
@@ -164,17 +177,19 @@ function SetupInner() {
 
           {error && <p className="text-sm text-coral">{error}</p>}
 
-          <Button
-            className="w-full"
-            disabled={busy !== null || connectionStatus === "offline"}
-            onClick={onCreate}
-          >
-            {busy === "create"
-              ? "Creating…"
-              : connectionStatus === "connecting"
-                ? "Connecting…"
-                : "Create room"}
-          </Button>
+          {!inviteJoin && (
+            <Button
+              className="w-full"
+              disabled={busy !== null || connectionStatus === "offline"}
+              onClick={onCreate}
+            >
+              {busy === "create"
+                ? "Creating…"
+                : connectionStatus === "connecting"
+                  ? "Connecting…"
+                  : "Create room"}
+            </Button>
+          )}
           {connectionStatus === "offline" && (
             <p className="text-sm text-coral">
               Can&apos;t reach the game server.{" "}

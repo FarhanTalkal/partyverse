@@ -148,22 +148,33 @@ export class RoomService {
     };
   }
 
-  leave(code: string, playerId: string) {
+  leave(
+    code: string,
+    playerId: string,
+    opts: { permanent?: boolean } = {}
+  ) {
+    const permanent = opts.permanent ?? false;
     const room = this.store.get(code);
     if (!room) return null;
     const player = room.players.get(playerId);
     if (!player) return room;
     const alreadyLeft = !player.connected;
-    player.connected = false;
-    player.socketId = null;
-    player.lastSeenAt = Date.now();
+    const nickname = player.nickname;
+
+    if (permanent) {
+      room.players.delete(playerId);
+    } else {
+      player.connected = false;
+      player.socketId = null;
+      player.lastSeenAt = Date.now();
+    }
 
     if (!alreadyLeft) {
       room.chat.push({
         id: idAlphabet(),
         playerId: "system",
         nickname: "PartyVerse",
-        text: `${player.nickname} left the game`,
+        text: `${nickname} left the game`,
         createdAt: Date.now(),
       });
       if (room.chat.length > 100) room.chat = room.chat.slice(-100);
@@ -177,7 +188,8 @@ export class RoomService {
     }
 
     const anyConnected = [...room.players.values()].some((p) => p.connected);
-    if (!anyConnected) {
+    // Explicit Leave: tear down empty rooms. Disconnect: keep for reconnect/invite grace.
+    if (!anyConnected && permanent) {
       clearTimer(room);
       room.state = "CLOSED";
       this.store.delete(room.code);
@@ -353,8 +365,15 @@ export class RoomService {
     const now = Date.now();
     for (const room of this.store.values()) {
       const idle = now - room.updatedAt > config.roomIdleTtlMs;
-      const noneConnected = ![...room.players.values()].some((p) => p.connected);
-      if (idle || noneConnected) {
+      const players = [...room.players.values()];
+      const noneConnected = !players.some((p) => p.connected);
+      const lastSeen = players.reduce(
+        (max, p) => Math.max(max, p.lastSeenAt),
+        room.updatedAt
+      );
+      const graceExpired =
+        noneConnected && now - lastSeen > config.disconnectGraceMs;
+      if (idle || graceExpired) {
         clearTimer(room);
         this.store.delete(room.code);
       }

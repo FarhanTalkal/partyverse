@@ -95,8 +95,15 @@ export function registerHandlers(
       );
       if ("error" in result) {
         const err = result.error;
-        emitError(socket, err, err.replace(/_/g, " ").toLowerCase());
-        ack?.({ ok: false, error: err });
+        const messages: Record<typeof err, string> = {
+          ROOM_NOT_FOUND:
+            "Room not found. Ask the host to stay in the lobby and send a fresh invite.",
+          ROOM_FULL: "That room is full.",
+          GAME_UNAVAILABLE: "The game already started — ask the host for a new room.",
+          NICKNAME_TAKEN: "That nickname is taken in this room. Try another.",
+        };
+        emitError(socket, err, messages[err]);
+        ack?.({ ok: false, error: messages[err] });
         return;
       }
       bindSocketRoom(
@@ -365,7 +372,7 @@ export function registerHandlers(
     socket.on(SOCKET_EVENTS.ROOM_LEAVE, () => {
       const { roomCode, playerId } = socket.data;
       if (!roomCode || !playerId) return;
-      const room = rooms.leave(roomCode, playerId);
+      const room = rooms.leave(roomCode, playerId, { permanent: true });
       socket.data = {};
       void socket.leave(roomCode);
       if (room) broadcast(room);
@@ -374,7 +381,8 @@ export function registerHandlers(
     socket.on("disconnect", () => {
       const { roomCode, playerId } = socket.data;
       if (!roomCode || !playerId) return;
-      const room = rooms.leave(roomCode, playerId);
+      // Soft leave — keep room alive so invitees can join while host reconnects
+      const room = rooms.leave(roomCode, playerId, { permanent: false });
       if (room) {
         io.to(room.code).emit(SOCKET_EVENTS.PLAYER_EVENT, {
           type: "disconnect",

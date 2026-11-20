@@ -9,7 +9,7 @@ export function AvatarPicker({
   value,
   onChange,
 }: {
-  value: AvatarId;
+  value: AvatarId | null;
   onChange: (avatar: AvatarId) => void;
 }) {
   return (

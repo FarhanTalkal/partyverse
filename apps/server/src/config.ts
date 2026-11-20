@@ -8,6 +8,8 @@ export const config = {
   corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
   nodeEnv: process.env.NODE_ENV ?? "development",
   roomIdleTtlMs: Number(process.env.ROOM_IDLE_TTL_MS ?? 1_800_000),
+  /** Keep empty rooms after last disconnect so invitees can still join / hosts can reconnect. */
+  disconnectGraceMs: Number(process.env.DISCONNECT_GRACE_MS ?? 180_000),
   chatRateLimitPerMin: Number(process.env.CHAT_RATE_LIMIT_PER_MIN ?? 20),
   ai: {
     enabled: process.env.AI_ENABLED === "true" && Boolean(process.env.AI_API_KEY),
