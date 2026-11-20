@@ -1,0 +1,26 @@
+{
+  "name": "partyverse",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n web,server -c cyan,magenta \"npm run dev -w @partyverse/web\" \"npm run dev -w @partyverse/server\"",
+    "dev:web": "npm run dev -w @partyverse/web",
+    "dev:server": "npm run dev -w @partyverse/server",
+    "build": "npm run build -w @partyverse/shared && npm run build -w @partyverse/server && npm run build -w @partyverse/web",
+    "build:shared": "npm run build -w @partyverse/shared",
+    "start": "concurrently -n web,server -c cyan,magenta \"npm run start -w @partyverse/web\" \"npm run start -w @partyverse/server\"",
+    "lint": "npm run lint -w @partyverse/web --if-present",
+    "smoke": "node scripts/smoke-multiplayer.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
