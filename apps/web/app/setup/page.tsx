@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/Input";
 import { MusicToggle } from "@/components/ui/MusicProvider";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useGameSocket } from "@/hooks/useGameSocket";
-import { loadProfile, saveProfile } from "@/lib/session";
+import { saveProfile } from "@/lib/session";
 import { savePreferredMode } from "@/lib/modes";
 
 function SetupInner() {
@@ -34,23 +34,18 @@ function SetupInner() {
 
   const { createRoom, joinRoom, connectionStatus, retryConnect } = useGameSocket();
   const [nickname, setNickname] = useState("");
-  const [avatar, setAvatar] = useState<AvatarId | null>(inviteJoin ? null : "cat");
+  const [avatar, setAvatar] = useState<AvatarId | null>(null);
   const [code, setCode] = useState(joinCode ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"create" | "join" | null>(null);
 
   useEffect(() => {
-    const profile = loadProfile();
-    // Never prefill nickname — always type fresh (placeholder guides the user)
+    // Always type a fresh nickname and pick an avatar — no defaults
     setNickname("");
-    if (inviteJoin) {
-      setAvatar(null);
-    } else if (profile?.avatar) {
-      setAvatar(profile.avatar);
-    }
+    setAvatar(null);
     if (joinCode) setCode(joinCode);
     if (preferred) savePreferredMode(preferred);
-  }, [preferred, joinCode, inviteJoin]);
+  }, [preferred, joinCode]);
 
   function validate() {
     const parsed = nicknameSchema.safeParse(nickname);
@@ -144,9 +139,12 @@ function SetupInner() {
 
           <div>
             <span className="mb-2 block text-sm font-semibold text-ink">
-              Avatar{inviteJoin ? " — pick one" : ""}
+              Avatar — pick one
             </span>
             <AvatarPicker value={avatar} onChange={setAvatar} />
+            {!avatar && nickname.trim().length >= 2 && (
+              <p className="mt-2 text-xs text-amber">Choose an avatar to continue</p>
+            )}
           </div>
 
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">

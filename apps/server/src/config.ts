@@ -9,7 +9,7 @@ export const config = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   roomIdleTtlMs: Number(process.env.ROOM_IDLE_TTL_MS ?? 1_800_000),
   /** Keep empty rooms after last disconnect so hosts can share invites in WhatsApp and come back. */
-  disconnectGraceMs: Number(process.env.DISCONNECT_GRACE_MS ?? 900_000),
+  disconnectGraceMs: Number(process.env.DISCONNECT_GRACE_MS ?? 2_700_000),
   chatRateLimitPerMin: Number(process.env.CHAT_RATE_LIMIT_PER_MIN ?? 20),
   ai: {
     enabled: process.env.AI_ENABLED === "true" && Boolean(process.env.AI_API_KEY),

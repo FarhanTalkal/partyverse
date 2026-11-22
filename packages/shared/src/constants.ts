@@ -16,6 +16,10 @@ export const CHAOS_VOTE_POINTS = 50;
 export const CHAOS_RESPONSE_POINTS = 25;
 export const MIND_MATCH_POINTS = 60;
 export const MIND_TRIPLE_BONUS = 40;
+export const DILEMMA_MAJORITY_POINTS = 40;
+export const DILEMMA_MINORITY_POINTS = 70;
+export const GEET_VOTE_POINTS = 50;
+export const GEET_RESPONSE_POINTS = 20;
 
 export const AVATARS = [
   "cat",
@@ -44,7 +48,14 @@ export const AVATAR_META: Record<
   robot: { label: "Bot", emoji: "🤖" },
 };
 
-export const GAME_MODES = ["brain", "chaos", "bluff", "mind"] as const;
+export const GAME_MODES = [
+  "brain",
+  "chaos",
+  "bluff",
+  "mind",
+  "dilemma",
+  "geet",
+] as const;
 export type GameMode = (typeof GAME_MODES)[number];
 
 export const GAME_MODE_META: Record<
@@ -70,6 +81,16 @@ export const GAME_MODE_META: Record<
     name: "Mind Match",
     tagline: "Think alike",
     blurb: "Same prompt for everyone — matching answers bring you closer.",
+  },
+  dilemma: {
+    name: "Desi Dilemma",
+    tagline: "Two choices. Pick a side.",
+    blurb: "India debates in seconds — majority or minority scoring keeps it spicy.",
+  },
+  geet: {
+    name: "Geet Round",
+    tagline: "Song titles under pressure",
+    blurb: "Get a letter, drop a song title, then vote for the catchiest pick.",
   },
 };
 

@@ -63,16 +63,19 @@ export function BluffBetray({
                   "rounded-2xl px-4 py-3",
                   isCulprit
                     ? "border-2 border-coral bg-coral/15 shadow-glow"
-                    : "bg-white/80 dark:bg-white/10"
+                    : "border border-teal/30 bg-teal/10"
                 )}
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-ink">{r.nickname}</span>
-                  {isCulprit && (
-                    <span className="rounded-full bg-coral px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                      Culprit
-                    </span>
-                  )}
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white",
+                      isCulprit ? "bg-coral" : "bg-teal"
+                    )}
+                  >
+                    {isCulprit ? "Culprit" : "Innocent"}
+                  </span>
                 </div>
                 <span className="text-sm text-slate">{r.role}</span>
               </li>
@@ -162,14 +165,57 @@ export function BluffBetray({
       )}
 
       {scenario.phase === "discussion" && (
-        <div className="rounded-[1.75rem] border border-teal/30 bg-teal/5 p-4">
-          <p className="mb-3 text-sm font-semibold text-ink">
+        <div className="space-y-4 rounded-[1.75rem] border border-teal/30 bg-teal/5 p-4">
+          <p className="text-sm font-semibold text-ink">
             Discussion is open — chat with the group. Clues stay visible above.
           </p>
           <ChatPanel
             messages={room.chat}
             onSend={(text) => emit(SOCKET_EVENTS.CHAT_SEND, { text })}
           />
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">
+            <p className="mb-3 text-sm font-semibold text-ink">
+              Ready for voting?{" "}
+              <span className="font-normal text-slate">
+                ({room.bluffReadyIds.length}/
+                {room.players.filter((p) => p.connected).length})
+              </span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {room.players
+                .filter((p) => p.connected)
+                .map((p) => {
+                  const ready = room.bluffReadyIds.includes(p.id);
+                  const isSelf = p.id === playerId;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      disabled={!isSelf}
+                      onClick={() => {
+                        if (!isSelf) return;
+                        emit(SOCKET_EVENTS.BLUFF_READY, { ready: !ready });
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition",
+                        ready
+                          ? "border-teal bg-teal/15 text-teal"
+                          : "border-[var(--border)] text-slate",
+                        isSelf && "ring-2 ring-coral/40"
+                      )}
+                      aria-pressed={ready}
+                    >
+                      <span aria-hidden>{ready ? "✓" : "○"}</span>
+                      {p.nickname}
+                      {isSelf ? " (you)" : ""}
+                    </button>
+                  );
+                })}
+            </div>
+            <p className="mt-2 text-xs text-slate">
+              When everyone ticks ready, voting starts early.
+            </p>
+          </div>
         </div>
       )}
 

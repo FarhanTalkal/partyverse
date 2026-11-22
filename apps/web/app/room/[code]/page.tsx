@@ -16,13 +16,15 @@ import { GameResults } from "@/components/game/GameResults";
 import { BrainBattle } from "@/components/modes/brain/BrainBattle";
 import { ChaosChallenge } from "@/components/modes/chaos/ChaosChallenge";
 import { BluffBetray } from "@/components/modes/bluff/BluffBetray";
+import { DesiDilemma } from "@/components/modes/dilemma/DesiDilemma";
+import { GeetRound } from "@/components/modes/geet/GeetRound";
 import { MindMatch } from "@/components/modes/mind/MindMatch";
 import { Button } from "@/components/ui/Button";
 import { ConnectionPill } from "@/components/ui/ConnectionPill";
 import { MusicToggle, useMusic } from "@/components/ui/MusicProvider";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useGameSocket } from "@/hooks/useGameSocket";
-import { defaultSettingsFor, inviteUrl, loadPreferredMode } from "@/lib/modes";
+import { inviteUrl, loadPreferredMode } from "@/lib/modes";
 import { loadMembership, loadProfile } from "@/lib/session";
 
 export default function RoomPage() {
@@ -411,16 +413,6 @@ export default function RoomPage() {
                         emit(SOCKET_EVENTS.GAME_SELECT, payload)
                       }
                       onStart={() => emit(SOCKET_EVENTS.GAME_START)}
-                      onPractice={(mode) => {
-                        emit(
-                          SOCKET_EVENTS.GAME_SELECT,
-                          defaultSettingsFor(mode, true)
-                        );
-                        setTimeout(
-                          () => emit(SOCKET_EVENTS.GAME_START),
-                          80
-                        );
-                      }}
                       disabled={
                         room.players.filter((p) => p.connected).length <
                         MIN_PLAYERS
@@ -478,6 +470,12 @@ export default function RoomPage() {
               )}
               {inGame && room.selectedMode === "mind" && (
                 <MindMatch room={room} emit={emit} />
+              )}
+              {inGame && room.selectedMode === "dilemma" && (
+                <DesiDilemma room={room} playerId={playerId} emit={emit} />
+              )}
+              {inGame && room.selectedMode === "geet" && (
+                <GeetRound room={room} playerId={playerId} emit={emit} />
               )}
             </section>
 

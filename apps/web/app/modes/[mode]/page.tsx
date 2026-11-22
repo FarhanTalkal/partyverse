@@ -36,11 +36,9 @@ export default function ModeDetailPage() {
           <p className="text-sm font-semibold uppercase tracking-wide text-amber">
             {meta.tagline}
           </p>
-          {(mode === "brain" || mode === "mind") && (
-            <span className="rounded-full bg-teal/15 px-3 py-1 text-xs font-bold text-teal">
-              Solo OK
-            </span>
-          )}
+          <span className="rounded-full bg-teal/15 px-3 py-1 text-xs font-bold text-teal">
+            Multiplayer
+          </span>
         </div>
         <h1 className="mt-2 font-display text-4xl font-extrabold tracking-tight">
           {meta.name}
@@ -73,6 +71,20 @@ export default function ModeDetailPage() {
               <li>• Same prompt for everyone — no talking about answers</li>
               <li>• Matching answers score points</li>
               <li>• Quick, light rounds for any group</li>
+            </>
+          )}
+          {mode === "dilemma" && (
+            <>
+              <li>• Two spicy choices — pick a side fast</li>
+              <li>• Alternating majority / minority scoring</li>
+              <li>• Perfect icebreaker between heavier games</li>
+            </>
+          )}
+          {mode === "geet" && (
+            <>
+              <li>• Get a letter, drop a song title</li>
+              <li>• Anonymous reveal, then vote for the catchiest</li>
+              <li>• Antakshari energy without the arguments</li>
             </>
           )}
         </ul>

@@ -10,6 +10,8 @@ import { config } from "../config";
 import { brainController } from "../games/brain";
 import { bluffController, getPrivateBluff } from "../games/bluff";
 import { beginVotePhase, chaosController } from "../games/chaos";
+import { dilemmaController } from "../games/dilemma";
+import { geetController } from "../games/geet";
 import { mindController } from "../games/mind";
 import type { RoomStore } from "./RoomStore";
 import { clearTimer, transition } from "./stateMachine";
@@ -69,10 +71,19 @@ export class RoomService {
       bluffPrivate: new Map(),
       bluffCulpritId: null,
       bluffVotes: new Map(),
+      bluffReady: new Set(),
       bluffReveal: null,
       mindPrompt: null,
       mindSubmissions: new Map(),
       mindResult: null,
+      dilemmaPrompt: null,
+      dilemmaVotes: new Map(),
+      dilemmaResult: null,
+      geetPrompt: null,
+      geetSubmissions: new Map(),
+      geetResponses: null,
+      geetResult: null,
+      geetPhase: null,
       winnerIds: [],
     };
 
@@ -267,11 +278,7 @@ export class RoomService {
       return { error: "INVALID_STATE" };
     }
     const connected = [...room.players.values()].filter((p) => p.connected);
-    const practice =
-      (room.settings.mode === "brain" && room.settings.brain.practice) ||
-      (room.settings.mode === "mind" && room.settings.mind.practice);
-    const minNeeded = practice ? 1 : MIN_PLAYERS;
-    if (connected.length < minNeeded) return { error: "MIN_PLAYERS" };
+    if (connected.length < MIN_PLAYERS) return { error: "MIN_PLAYERS" };
 
     for (const p of room.players.values()) {
       p.score = 0;
@@ -284,20 +291,24 @@ export class RoomService {
     room.chaosResult = null;
     room.bluffReveal = null;
     room.mindResult = null;
+    room.dilemmaResult = null;
+    room.geetResult = null;
 
     if (room.settings.mode === "brain") {
-      room.totalRounds = practice
-        ? Math.min(5, room.settings.brain.rounds)
-        : room.settings.brain.rounds;
+      room.totalRounds = room.settings.brain.rounds;
       await brainController.startRound(room, broadcast);
     } else if (room.settings.mode === "chaos") {
       room.totalRounds = room.settings.chaos.rounds;
       await chaosController.startRound(room, broadcast);
     } else if (room.settings.mode === "mind") {
-      room.totalRounds = practice
-        ? Math.min(5, room.settings.mind.rounds)
-        : room.settings.mind.rounds;
+      room.totalRounds = room.settings.mind.rounds;
       await mindController.startRound(room, broadcast);
+    } else if (room.settings.mode === "dilemma") {
+      room.totalRounds = room.settings.dilemma.rounds;
+      await dilemmaController.startRound(room, broadcast);
+    } else if (room.settings.mode === "geet") {
+      room.totalRounds = room.settings.geet.rounds;
+      await geetController.startRound(room, broadcast);
     } else {
       room.totalRounds = 1;
       await bluffController.startRound(room, broadcast);
@@ -333,10 +344,19 @@ export class RoomService {
     room.bluffReveal = null;
     room.bluffPrivate = new Map();
     room.bluffVotes = new Map();
+    room.bluffReady = new Set();
     room.bluffCulpritId = null;
     room.mindPrompt = null;
     room.mindResult = null;
     room.mindSubmissions = new Map();
+    room.dilemmaPrompt = null;
+    room.dilemmaVotes = new Map();
+    room.dilemmaResult = null;
+    room.geetPrompt = null;
+    room.geetSubmissions = new Map();
+    room.geetResponses = null;
+    room.geetResult = null;
+    room.geetPhase = null;
     room.winnerIds = [];
   }
 
@@ -414,5 +434,7 @@ export {
   chaosController,
   bluffController,
   mindController,
+  dilemmaController,
+  geetController,
   beginVotePhase,
 };

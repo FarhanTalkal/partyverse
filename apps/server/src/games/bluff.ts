@@ -69,6 +69,7 @@ function beginDiscussion(
   if (!room.settings || room.settings.mode !== "bluff" || !room.bluffScenario) {
     return;
   }
+  room.bluffReady = new Set();
   const now = Date.now();
   room.bluffScenario = {
     ...room.bluffScenario,
@@ -79,6 +80,29 @@ function beginDiscussion(
   broadcast(room);
   clearTimer(room);
   room.timer = setTimeout(() => beginVoting(room, broadcast), discussionMs);
+}
+
+export function submitBluffReady(
+  room: InternalRoom,
+  playerId: string,
+  ready: boolean
+): "ok" | "ok-all" | "invalid" {
+  if (
+    room.state !== "IN_PROGRESS" ||
+    room.bluffScenario?.phase !== "discussion"
+  ) {
+    return "invalid";
+  }
+  if (ready) room.bluffReady.add(playerId);
+  else room.bluffReady.delete(playerId);
+  const connected = [...room.players.values()].filter((p) => p.connected);
+  if (
+    connected.length > 0 &&
+    connected.every((p) => room.bluffReady.has(p.id))
+  ) {
+    return "ok-all";
+  }
+  return "ok";
 }
 
 function beginVoting(room: InternalRoom, broadcast: BroadcastFn) {
@@ -129,6 +153,7 @@ export const bluffController: GameController = {
 
     room.bluffPrivate = new Map();
     room.bluffVotes = new Map();
+    room.bluffReady = new Set();
     room.bluffReveal = null;
     room.bluffCulpritId = null;
     room.totalRounds = 1;
@@ -204,4 +229,4 @@ export function getPrivateBluff(
   return room.bluffPrivate.get(playerId);
 }
 
-export { beginVoting, reveal };
+export { beginVoting, beginDiscussion, reveal };

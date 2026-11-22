@@ -3,19 +3,19 @@
 @tailwind utilities;
 
 :root {
-  --color-ink: #152238;
-  --color-mist: #eef3ff;
-  --color-foam: #ffffff;
-  --color-coral: #ff5a3c;
-  --color-teal: #12b5a0;
-  --color-amber: #f5a524;
-  --color-slate: #5b6b86;
-  --surface: rgba(255, 255, 255, 0.82);
-  --surface-strong: #ffffff;
-  --border: rgba(21, 34, 56, 0.12);
-  --glow: rgba(255, 90, 60, 0.28);
-  --backdrop-base: linear-gradient(160deg, #eaf2ff 0%, #fff4e8 45%, #e8fff8 100%);
-  --card-shadow: 0 18px 40px rgba(21, 34, 56, 0.1);
+  --color-ink: #243247;
+  --color-mist: #e8edf5;
+  --color-foam: #f3f5f9;
+  --color-coral: #e85a40;
+  --color-teal: #0f9f8c;
+  --color-amber: #d9921a;
+  --color-slate: #5a6780;
+  --surface: rgba(243, 245, 249, 0.92);
+  --surface-strong: #eef1f6;
+  --border: rgba(36, 50, 71, 0.14);
+  --glow: rgba(232, 90, 64, 0.2);
+  --backdrop-base: linear-gradient(160deg, #dfe7f2 0%, #ebe4da 48%, #d9ebe6 100%);
+  --card-shadow: 0 14px 32px rgba(36, 50, 71, 0.08);
 }
 
 html.dark {

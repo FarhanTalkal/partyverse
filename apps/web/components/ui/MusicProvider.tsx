@@ -16,95 +16,164 @@ interface MusicContextValue {
   enabled: boolean;
   toggle: () => void;
   setMode: (mode: MusicMode) => void;
+  /** 0 = calm, 1 = urgent (near round end) */
+  setIntensity: (value: number) => void;
 }
 
 const MusicContext = createContext<MusicContextValue | null>(null);
 
-/** Soft generative ambient — no external audio files required. */
-function createAmbient(
-  ctx: AudioContext,
-  kind: "lobby" | "game"
-): { stop: () => void } {
+function createLivelyEngine(ctx: AudioContext) {
   const master = ctx.createGain();
-  master.gain.value = kind === "game" ? 0.035 : 0.028;
+  master.gain.value = 0.0001;
   master.connect(ctx.destination);
 
-  const freqs =
-    kind === "game" ? [196, 246.94, 293.66, 349.23] : [174.61, 220, 261.63, 329.63];
-  const oscs: OscillatorNode[] = [];
-  const now = ctx.currentTime;
+  const bass = ctx.createOscillator();
+  const bassGain = ctx.createGain();
+  bass.type = "triangle";
+  bass.frequency.value = 98;
+  bassGain.gain.value = 0.22;
+  bass.connect(bassGain);
+  bassGain.connect(master);
 
-  freqs.forEach((f, i) => {
-    const osc = ctx.createOscillator();
-    const g = ctx.createGain();
-    osc.type = i % 2 === 0 ? "sine" : "triangle";
-    osc.frequency.value = f;
-    g.gain.value = 0.0001;
-    g.gain.exponentialRampToValueAtTime(0.2 / freqs.length, now + 1.5 + i * 0.2);
-    const lfo = ctx.createOscillator();
-    const lfoGain = ctx.createGain();
-    lfo.frequency.value = 0.05 + i * 0.02;
-    lfoGain.gain.value = 6;
-    lfo.connect(lfoGain);
-    lfoGain.connect(osc.frequency);
-    osc.connect(g);
-    g.connect(master);
-    osc.start();
-    lfo.start();
-    oscs.push(osc, lfo);
-  });
+  const lead = ctx.createOscillator();
+  const leadGain = ctx.createGain();
+  lead.type = "square";
+  lead.frequency.value = 392;
+  leadGain.gain.value = 0.06;
+  lead.connect(leadGain);
+  leadGain.connect(master);
+
+  const pad = ctx.createOscillator();
+  const padGain = ctx.createGain();
+  pad.type = "sine";
+  pad.frequency.value = 246.94;
+  padGain.gain.value = 0.1;
+  pad.connect(padGain);
+  padGain.connect(master);
+
+  const click = ctx.createOscillator();
+  const clickGain = ctx.createGain();
+  click.type = "square";
+  click.frequency.value = 880;
+  clickGain.gain.value = 0.0001;
+  click.connect(clickGain);
+  clickGain.connect(master);
+
+  bass.start();
+  lead.start();
+  pad.start();
+  click.start();
+
+  let mode: "lobby" | "game" = "lobby";
+  let intensity = 0;
+  let beat = 0;
+  let timer: number | null = null;
+
+  const lobbyMelody = [392, 440, 523.25, 440, 349.23, 392, 329.63, 392];
+  const gameMelody = [523.25, 587.33, 659.25, 587.33, 698.46, 659.25, 523.25, 440];
+
+  function schedule() {
+    const now = ctx.currentTime;
+    const bpm = mode === "lobby" ? 108 + intensity * 12 : 128 + intensity * 48;
+    const beatSec = 60 / bpm;
+    const mel = mode === "lobby" ? lobbyMelody : gameMelody;
+    const note = mel[beat % mel.length];
+
+    lead.frequency.setTargetAtTime(note, now, 0.01);
+    pad.frequency.setTargetAtTime(note / 2, now, 0.05);
+    bass.frequency.setTargetAtTime(mode === "game" ? 110 : 98, now, 0.08);
+
+    // Percussive click on beats; stronger near end of rounds
+    const clickPeak = mode === "game" ? 0.05 + intensity * 0.12 : 0.03;
+    clickGain.gain.cancelScheduledValues(now);
+    clickGain.gain.setValueAtTime(0.0001, now);
+    clickGain.gain.linearRampToValueAtTime(clickPeak, now + 0.01);
+    clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+
+    // Lead pulse
+    const leadPeak = mode === "game" ? 0.08 + intensity * 0.1 : 0.07;
+    leadGain.gain.cancelScheduledValues(now);
+    leadGain.gain.setValueAtTime(leadPeak * 0.4, now);
+    leadGain.gain.linearRampToValueAtTime(leadPeak, now + 0.04);
+    leadGain.gain.linearRampToValueAtTime(leadPeak * 0.45, now + beatSec * 0.85);
+
+    const targetMaster = mode === "game" ? 0.11 + intensity * 0.08 : 0.09;
+    master.gain.setTargetAtTime(targetMaster, now, 0.2);
+
+    beat += 1;
+    timer = window.setTimeout(schedule, beatSec * 1000);
+  }
+
+  schedule();
 
   return {
-    stop: () => {
+    setMode(next: "lobby" | "game") {
+      mode = next;
+      beat = 0;
+    },
+    setIntensity(v: number) {
+      intensity = Math.max(0, Math.min(1, v));
+    },
+    stop() {
+      if (timer) window.clearTimeout(timer);
       const t = ctx.currentTime;
-      master.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+      master.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
       window.setTimeout(() => {
-        oscs.forEach((o) => {
+        [bass, lead, pad, click].forEach((o) => {
           try {
             o.stop();
           } catch {
-            /* already stopped */
+            /* noop */
           }
         });
         master.disconnect();
-      }, 500);
+      }, 400);
     },
   };
 }
+
+type Engine = ReturnType<typeof createLivelyEngine>;
 
 export function MusicProvider({ children }: { children: ReactNode }) {
   const [enabled, setEnabled] = useState(false);
   const [mode, setModeState] = useState<MusicMode>("lobby");
   const ctxRef = useRef<AudioContext | null>(null);
-  const stopRef = useRef<(() => void) | null>(null);
+  const engineRef = useRef<Engine | null>(null);
+  const intensityRef = useRef(0);
 
   const stop = useCallback(() => {
-    stopRef.current?.();
-    stopRef.current = null;
+    engineRef.current?.stop();
+    engineRef.current = null;
   }, []);
 
-  const start = useCallback(
-    async (kind: "lobby" | "game") => {
-      stop();
-      if (typeof window === "undefined") return;
-      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!Ctx) return;
-      if (!ctxRef.current) ctxRef.current = new Ctx();
-      const ctx = ctxRef.current;
-      if (ctx.state === "suspended") await ctx.resume();
-      stopRef.current = createAmbient(ctx, kind).stop;
-    },
-    [stop]
-  );
+  const ensureEngine = useCallback(async () => {
+    if (typeof window === "undefined") return null;
+    const Ctx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
+    if (!Ctx) return null;
+    if (!ctxRef.current) ctxRef.current = new Ctx();
+    const ctx = ctxRef.current;
+    if (ctx.state === "suspended") await ctx.resume();
+    if (!engineRef.current) {
+      engineRef.current = createLivelyEngine(ctx);
+      engineRef.current.setIntensity(intensityRef.current);
+    }
+    return engineRef.current;
+  }, []);
 
   useEffect(() => {
     if (!enabled || mode === "off") {
       stop();
       return;
     }
-    void start(mode);
+    void ensureEngine().then((engine) => {
+      engine?.setMode(mode);
+      engine?.setIntensity(intensityRef.current);
+    });
     return () => stop();
-  }, [enabled, mode, start, stop]);
+  }, [enabled, mode, ensureEngine, stop]);
 
   const toggle = useCallback(() => {
     setEnabled((v) => !v);
@@ -112,10 +181,18 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 
   const setMode = useCallback((next: MusicMode) => {
     setModeState(next);
+    if (next === "lobby" || next === "game") {
+      engineRef.current?.setMode(next);
+    }
+  }, []);
+
+  const setIntensity = useCallback((value: number) => {
+    intensityRef.current = value;
+    engineRef.current?.setIntensity(value);
   }, []);
 
   return (
-    <MusicContext.Provider value={{ enabled, toggle, setMode }}>
+    <MusicContext.Provider value={{ enabled, toggle, setMode, setIntensity }}>
       {children}
     </MusicContext.Provider>
   );
@@ -133,11 +210,12 @@ export function MusicToggle() {
     <button
       type="button"
       onClick={toggle}
-      className="rounded-full border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-ink"
+      className="grid h-9 w-9 place-items-center rounded-full border border-[var(--border)] bg-[var(--surface-strong)] text-base"
       aria-pressed={enabled}
+      aria-label={enabled ? "Mute music" : "Play music"}
       title={enabled ? "Mute music" : "Play music"}
     >
-      {enabled ? "Music on" : "Music"}
+      {enabled ? "🔊" : "🔇"}
     </button>
   );
 }

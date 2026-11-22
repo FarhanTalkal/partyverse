@@ -22,13 +22,9 @@ const modeAccent: Record<GameMode, string> = {
   chaos: "border-l-[#ff5a3c]",
   bluff: "border-l-[#f5a524]",
   mind: "border-l-[#3b82f6]",
+  dilemma: "border-l-[#a855f7]",
+  geet: "border-l-[#ec4899]",
 };
-
-const soloModes = new Set<GameMode>(["brain", "mind"]);
-const browseOrder: GameMode[] = [
-  ...GAME_MODES.filter((m) => soloModes.has(m)),
-  ...GAME_MODES.filter((m) => !soloModes.has(m)),
-];
 
 export function LandingPage() {
   const router = useRouter();
@@ -115,16 +111,15 @@ export function LandingPage() {
       </section>
 
       <Section id="modes" className="pt-4">
-        <h2 className="font-display text-3xl font-bold tracking-tight text-ink sm:whitespace-nowrap md:text-4xl">
-          Four modes. Pick one and play.
+        <h2 className="font-display text-3xl font-bold tracking-tight text-ink md:text-4xl">
+          Six multiplayer modes. Pick one and play.
         </h2>
-        <p className="mt-3 text-slate sm:whitespace-nowrap">
-          Start any game — hosts can switch anytime.
+        <p className="mt-3 text-slate">
+          Built for groups — hosts can switch anytime.
         </p>
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
-          {browseOrder.map((mode, i) => {
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {GAME_MODES.map((mode, i) => {
             const meta = GAME_MODE_META[mode];
-            const solo = soloModes.has(mode);
             return (
               <motion.article
                 key={mode}
@@ -136,13 +131,8 @@ export function LandingPage() {
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="inline-flex rounded-full bg-ink/5 px-3 py-1 text-xs font-semibold text-ink dark:bg-white/10">
-                    {solo ? "Solo" : "Multiplayer"}
+                    Multiplayer
                   </span>
-                  {solo && (
-                    <span className="inline-flex rounded-full bg-teal/15 px-3 py-1 text-xs font-bold text-teal">
-                      Solo OK
-                    </span>
-                  )}
                 </div>
                 <h3 className="mt-4 font-display text-2xl font-bold tracking-tight text-ink">
                   {meta.name}

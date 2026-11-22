@@ -37,11 +37,11 @@ export function PlayerList({
                 {isSelf ? " (you)" : ""}
                 {p.isHost ? " · Host" : ""}
               </p>
-              <p className="text-xs text-slate">
-                {p.connected ? (p.ready ? "Ready" : "Not ready") : null}
-                {p.connected ? " · " : null}
-                {p.score} pts
-              </p>
+            <p className="text-xs text-slate">
+              {p.connected ? (p.ready ? "Ready" : "Not ready") : null}
+              {p.connected ? " · " : null}
+              <span className="font-bold tabular-nums text-ink">{p.score} pts</span>
+            </p>
               {isHost && !isSelf && p.connected && onMakeHost && (
                 <button
                   type="button"

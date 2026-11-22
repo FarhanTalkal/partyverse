@@ -11,8 +11,10 @@ export function getSocket(): Socket {
       autoConnect: false,
       transports: ["websocket", "polling"],
       reconnection: true,
-      reconnectionAttempts: 12,
-      reconnectionDelay: 800,
+      reconnectionAttempts: 30,
+      reconnectionDelay: 600,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
     });
   }
   return socket;

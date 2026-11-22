@@ -4,7 +4,6 @@ import {
   BLUFF_RECOMMENDED_MIN,
   GAME_MODE_META,
   GAME_MODES,
-  MIN_PLAYERS,
   type GameMode,
 } from "@partyverse/shared";
 import { useEffect, useState } from "react";
@@ -15,7 +14,6 @@ export function GameSelect({
   playerCount,
   onSelect,
   onStart,
-  onPractice,
   selectedMode,
   preferredMode,
   disabled,
@@ -25,13 +23,11 @@ export function GameSelect({
   preferredMode?: GameMode | null;
   onSelect: (payload: Record<string, unknown>) => void;
   onStart: () => void;
-  onPractice?: (mode: "brain" | "mind") => void;
   disabled?: boolean;
 }) {
   const [mode, setMode] = useState<GameMode>(
     selectedMode ?? preferredMode ?? "brain"
   );
-  const groupPlay = playerCount >= MIN_PLAYERS;
 
   useEffect(() => {
     const initial = selectedMode ?? preferredMode ?? "brain";
@@ -45,25 +41,11 @@ export function GameSelect({
     onSelect(defaultSettingsFor(next));
   }
 
-  function startPractice() {
-    if (mode !== "brain" && mode !== "mind") return;
-    if (onPractice) {
-      onPractice(mode);
-      return;
-    }
-    onSelect(defaultSettingsFor(mode, true));
-    setTimeout(() => onStart(), 80);
-  }
-
-  const canPractice = !groupPlay && (mode === "brain" || mode === "mind");
-
   return (
     <div className="rounded-[1.5rem] pv-card p-4">
       <h3 className="font-display text-xl font-bold text-ink">Pick a mode</h3>
       <p className="mt-1 text-sm text-slate">
-        {groupPlay
-          ? "Choose a mode for the group."
-          : "Invite friends, or practice Brain / Mind alone."}
+        Six multiplayer games — pick one for the room.
       </p>
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         {GAME_MODES.map((id) => (
@@ -92,15 +74,6 @@ export function GameSelect({
       <Button className="mt-4 w-full" disabled={disabled} onClick={onStart}>
         Start {GAME_MODE_META[mode].name}
       </Button>
-      {canPractice && (
-        <Button
-          className="mt-2 w-full"
-          variant="ghost"
-          onClick={startPractice}
-        >
-          Practice solo ({GAME_MODE_META[mode].name})
-        </Button>
-      )}
     </div>
   );
 }

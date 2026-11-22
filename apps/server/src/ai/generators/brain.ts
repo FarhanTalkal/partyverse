@@ -12,26 +12,39 @@ const aiQuestionSchema = z.object({
   explanation: z.string().min(4).max(400),
 });
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function pickCurated(
   category: BrainCategory,
   difficulty: Difficulty,
   used: Set<string>
 ): CuratedBrainQuestion {
-  const unusedMatching = BRAIN_BANK.filter(
-    (q) =>
-      !used.has(q.id) &&
-      q.difficulty === difficulty &&
-      (category === "random" || q.category === category)
-  );
+  // Reset cycle once most of the bank is spent so rooms don't feel stuck
+  if (used.size >= Math.floor(BRAIN_BANK.length * 0.85)) {
+    used.clear();
+  }
   const unusedAny = BRAIN_BANK.filter((q) => !used.has(q.id));
-  // Prefer unused questions; only recycle after the bank is exhausted
+  const unusedCategory = unusedAny.filter(
+    (q) => category === "random" || q.category === category
+  );
+  const unusedExact = unusedCategory.filter((q) => q.difficulty === difficulty);
+  // Prefer unused overall (variety) over strict difficulty match
   const source =
-    unusedMatching.length > 0
-      ? unusedMatching
-      : unusedAny.length > 0
-        ? unusedAny
-        : BRAIN_BANK;
-  return source[Math.floor(Math.random() * source.length)];
+    unusedExact.length >= 2
+      ? unusedExact
+      : unusedCategory.length > 0
+        ? unusedCategory
+        : unusedAny.length > 0
+          ? unusedAny
+          : BRAIN_BANK;
+  return shuffle(source)[0];
 }
 
 export async function generateBrainQuestion(params: {

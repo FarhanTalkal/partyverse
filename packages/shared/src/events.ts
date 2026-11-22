@@ -27,7 +27,11 @@ export const SOCKET_EVENTS = {
   CHAOS_RESPOND: "chaos:respond",
   CHAOS_VOTE: "chaos:vote",
   BLUFF_VOTE: "bluff:vote",
+  BLUFF_READY: "bluff:ready",
   MIND_ANSWER: "mind:answer",
+  DILEMMA_VOTE: "dilemma:vote",
+  GEET_RESPOND: "geet:respond",
+  GEET_VOTE: "geet:vote",
 
   ROOM_STATE: "room:state",
   ROOM_ERROR: "room:error",
@@ -91,7 +95,6 @@ export const brainSettingsSchema = z.object({
   difficulty: z.enum(DIFFICULTIES),
   rounds: z.number().int().min(3).max(15).default(12),
   timePerQuestionMs: z.number().int().min(10000).max(60000).default(20000),
-  practice: z.boolean().optional(),
 });
 
 export const chaosSettingsSchema = z.object({
@@ -109,7 +112,17 @@ export const bluffSettingsSchema = z.object({
 export const mindSettingsSchema = z.object({
   rounds: z.number().int().min(3).max(15).default(10),
   responseTimeMs: z.number().int().min(12000).max(60000).default(25000),
-  practice: z.boolean().optional(),
+});
+
+export const dilemmaSettingsSchema = z.object({
+  rounds: z.number().int().min(3).max(15).default(10),
+  voteTimeMs: z.number().int().min(10000).max(45000).default(20000),
+});
+
+export const geetSettingsSchema = z.object({
+  rounds: z.number().int().min(3).max(15).default(8),
+  responseTimeMs: z.number().int().min(15000).max(60000).default(35000),
+  voteTimeMs: z.number().int().min(10000).max(45000).default(25000),
 });
 
 export const gameSelectSchema = z.discriminatedUnion("mode", [
@@ -117,6 +130,8 @@ export const gameSelectSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("chaos"), chaos: chaosSettingsSchema }),
   z.object({ mode: z.literal("bluff"), bluff: bluffSettingsSchema }),
   z.object({ mode: z.literal("mind"), mind: mindSettingsSchema }),
+  z.object({ mode: z.literal("dilemma"), dilemma: dilemmaSettingsSchema }),
+  z.object({ mode: z.literal("geet"), geet: geetSettingsSchema }),
 ]);
 
 export const brainAnswerSchema = z.object({
@@ -138,9 +153,28 @@ export const bluffVoteSchema = z.object({
   targetPlayerId: z.string().min(1),
 });
 
+export const bluffReadySchema = z.object({
+  ready: z.boolean(),
+});
+
 export const mindAnswerSchema = z.object({
   promptId: z.string().min(1),
   answer: z.string().trim().min(1).max(80),
+});
+
+export const dilemmaVoteSchema = z.object({
+  promptId: z.string().min(1),
+  choiceIndex: z.union([z.literal(0), z.literal(1)]),
+});
+
+export const geetRespondSchema = z.object({
+  promptId: z.string().min(1),
+  text: z.string().trim().min(1).max(80),
+});
+
+export const geetVoteSchema = z.object({
+  promptId: z.string().min(1),
+  responseId: z.string().min(1),
 });
 
 export const roomErrorSchema = z.object({

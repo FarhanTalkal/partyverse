@@ -1,12 +1,16 @@
 import {
   SOCKET_EVENTS,
+  bluffReadySchema,
   bluffVoteSchema,
   brainAnswerSchema,
   chaosRespondSchema,
   chaosVoteSchema,
   chatSendSchema,
   createRoomSchema,
+  dilemmaVoteSchema,
   gameSelectSchema,
+  geetRespondSchema,
+  geetVoteSchema,
   hostTransferSchema,
   joinRoomSchema,
   mindAnswerSchema,
@@ -18,16 +22,29 @@ import { config } from "../config";
 import {
   beginVotePhase,
   brainController,
+  dilemmaController,
+  geetController,
   mindController,
   RoomService,
 } from "../rooms/RoomService";
 import { submitBrainAnswer } from "../games/brain";
-import { submitBluffVote, reveal } from "../games/bluff";
+import {
+  beginVoting,
+  reveal,
+  submitBluffReady,
+  submitBluffVote,
+} from "../games/bluff";
 import {
   chaosController,
   submitChaosResponse,
   submitChaosVote,
 } from "../games/chaos";
+import { submitDilemmaVote } from "../games/dilemma";
+import {
+  beginGeetVotePhase,
+  submitGeetResponse,
+  submitGeetVote,
+} from "../games/geet";
 import { submitMindAnswer } from "../games/mind";
 import type { InMemoryRoomStore } from "../rooms/RoomStore";
 import { toPublicRoom } from "../rooms/serialize";
@@ -370,6 +387,109 @@ export function registerHandlers(
       if (status === "ok-all") {
         reveal(room, broadcast);
       }
+    });
+
+    socket.on(SOCKET_EVENTS.BLUFF_READY, (payload) => {
+      const room = getAuthorizedRoom(socket, store);
+      if (!room || !socket.data.playerId) return;
+      const parsed = bluffReadySchema.safeParse(payload);
+      if (!parsed.success) return;
+      const status = submitBluffReady(
+        room,
+        socket.data.playerId,
+        parsed.data.ready
+      );
+      if (status === "invalid") {
+        emitError(socket, "INVALID_STATE", "Ready only during discussion");
+        return;
+      }
+      if (status === "ok-all") {
+        beginVoting(room, broadcast);
+        return;
+      }
+      broadcast(room);
+    });
+
+    socket.on(SOCKET_EVENTS.DILEMMA_VOTE, (payload) => {
+      const room = getAuthorizedRoom(socket, store);
+      if (!room || !socket.data.playerId) return;
+      const parsed = dilemmaVoteSchema.safeParse(payload);
+      if (!parsed.success) return;
+      const status = submitDilemmaVote(
+        room,
+        socket.data.playerId,
+        parsed.data.promptId,
+        parsed.data.choiceIndex
+      );
+      if (status === "duplicate") {
+        emitError(socket, "ALREADY_SUBMITTED", "Already picked");
+        return;
+      }
+      if (status === "invalid") {
+        emitError(socket, "INVALID_STATE", "Cannot vote now");
+        return;
+      }
+      if (status === "ok-all") {
+        void dilemmaController.endRound(room, broadcast);
+        return;
+      }
+      broadcast(room);
+    });
+
+    socket.on(SOCKET_EVENTS.GEET_RESPOND, (payload) => {
+      const room = getAuthorizedRoom(socket, store);
+      if (!room || !socket.data.playerId) return;
+      const parsed = geetRespondSchema.safeParse(payload);
+      if (!parsed.success) return;
+      const status = submitGeetResponse(
+        room,
+        socket.data.playerId,
+        parsed.data.promptId,
+        parsed.data.text
+      );
+      if (status === "duplicate") {
+        emitError(socket, "ALREADY_SUBMITTED", "Already submitted");
+        return;
+      }
+      if (status === "invalid") {
+        emitError(
+          socket,
+          "INVALID_STATE",
+          "Song title must start with the given letter"
+        );
+        return;
+      }
+      if (status === "ok-all") {
+        beginGeetVotePhase(room, broadcast);
+        return;
+      }
+      broadcast(room);
+    });
+
+    socket.on(SOCKET_EVENTS.GEET_VOTE, (payload) => {
+      const room = getAuthorizedRoom(socket, store);
+      if (!room || !socket.data.playerId) return;
+      const parsed = geetVoteSchema.safeParse(payload);
+      if (!parsed.success) return;
+      const status = submitGeetVote(
+        room,
+        socket.data.playerId,
+        parsed.data.promptId,
+        parsed.data.responseId
+      );
+      if (status === "duplicate") {
+        emitError(socket, "ALREADY_SUBMITTED", "Already voted");
+        return;
+      }
+      if (status === "invalid") {
+        emitError(socket, "INVALID_STATE", "Cannot vote for that song");
+        return;
+      }
+      if (status === "ok-all") {
+        void geetController.endRound(room, broadcast);
+        return;
+      }
+      broadcast(room);
     });
 
     socket.on(SOCKET_EVENTS.MIND_ANSWER, (payload) => {

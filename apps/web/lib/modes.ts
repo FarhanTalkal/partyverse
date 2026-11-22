@@ -1,6 +1,6 @@
 import type { GameMode } from "@partyverse/shared";
 
-export function defaultSettingsFor(mode: GameMode, practice = false) {
+export function defaultSettingsFor(mode: GameMode) {
   if (mode === "chaos") {
     return {
       mode: "chaos" as const,
@@ -21,10 +21,21 @@ export function defaultSettingsFor(mode: GameMode, practice = false) {
     return {
       mode: "mind" as const,
       mind: {
-        rounds: practice ? 5 : 10,
+        rounds: 10,
         responseTimeMs: 25000,
-        practice: practice || undefined,
       },
+    };
+  }
+  if (mode === "dilemma") {
+    return {
+      mode: "dilemma" as const,
+      dilemma: { rounds: 10, voteTimeMs: 20000 },
+    };
+  }
+  if (mode === "geet") {
+    return {
+      mode: "geet" as const,
+      geet: { rounds: 8, responseTimeMs: 35000, voteTimeMs: 25000 },
     };
   }
   return {
@@ -32,9 +43,8 @@ export function defaultSettingsFor(mode: GameMode, practice = false) {
     brain: {
       category: "random" as const,
       difficulty: "medium" as const,
-      rounds: practice ? 5 : 12,
+      rounds: 12,
       timePerQuestionMs: 20000,
-      practice: practice || undefined,
     },
   };
 }
@@ -49,7 +59,14 @@ export function savePreferredMode(mode: GameMode) {
 export function loadPreferredMode(): GameMode | null {
   if (typeof window === "undefined") return null;
   const raw = sessionStorage.getItem(PREFERRED_MODE_KEY);
-  if (raw === "brain" || raw === "chaos" || raw === "bluff" || raw === "mind") {
+  if (
+    raw === "brain" ||
+    raw === "chaos" ||
+    raw === "bluff" ||
+    raw === "mind" ||
+    raw === "dilemma" ||
+    raw === "geet"
+  ) {
     return raw;
   }
   return null;

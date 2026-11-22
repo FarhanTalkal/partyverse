@@ -29,7 +29,6 @@ export interface BrainSettings {
   difficulty: Difficulty;
   rounds: number;
   timePerQuestionMs: number;
-  practice?: boolean;
 }
 
 export interface ChaosSettings {
@@ -47,14 +46,26 @@ export interface BluffSettings {
 export interface MindSettings {
   rounds: number;
   responseTimeMs: number;
-  practice?: boolean;
+}
+
+export interface DilemmaSettings {
+  rounds: number;
+  voteTimeMs: number;
+}
+
+export interface GeetSettings {
+  rounds: number;
+  responseTimeMs: number;
+  voteTimeMs: number;
 }
 
 export type GameSettings =
   | { mode: "brain"; brain: BrainSettings }
   | { mode: "chaos"; chaos: ChaosSettings }
   | { mode: "bluff"; bluff: BluffSettings }
-  | { mode: "mind"; mind: MindSettings };
+  | { mode: "mind"; mind: MindSettings }
+  | { mode: "dilemma"; dilemma: DilemmaSettings }
+  | { mode: "geet"; geet: GeetSettings };
 
 export interface LeaderboardEntry {
   playerId: string;
@@ -169,6 +180,57 @@ export interface MindRoundResult {
   leaderboard: LeaderboardEntry[];
 }
 
+export interface DilemmaPrompt {
+  id: string;
+  prompt: string;
+  options: [string, string];
+  scoring: "majority" | "minority";
+  timeLimitMs: number;
+  startedAt: number;
+  endsAt: number;
+}
+
+export interface DilemmaRoundResult {
+  promptId: string;
+  tallies: Array<{ option: string; count: number; playerIds: string[] }>;
+  scoring: "majority" | "minority";
+  submissions: Array<{
+    playerId: string;
+    nickname: string;
+    choice: string;
+    points: number;
+  }>;
+  leaderboard: LeaderboardEntry[];
+}
+
+export interface GeetPrompt {
+  id: string;
+  letter: string;
+  hint?: string;
+  timeLimitMs: number;
+  startedAt: number;
+  endsAt: number;
+}
+
+export interface GeetResponsePublic {
+  id: string;
+  text: string;
+  anonymousLabel: string;
+}
+
+export interface GeetRoundResult {
+  promptId: string;
+  responses: Array<{
+    id: string;
+    playerId: string;
+    nickname: string;
+    text: string;
+    votes: number;
+    points: number;
+  }>;
+  leaderboard: LeaderboardEntry[];
+}
+
 export interface PublicRoom {
   code: string;
   state: RoomState;
@@ -187,8 +249,16 @@ export interface PublicRoom {
   chaosResult: ChaosRoundResult | null;
   bluffScenario: BluffPublicScenario | null;
   bluffReveal: BluffReveal | null;
+  bluffReadyIds: string[];
   mindPrompt: MindPrompt | null;
   mindResult: MindRoundResult | null;
+  dilemmaPrompt: DilemmaPrompt | null;
+  dilemmaVotedIds: string[];
+  dilemmaResult: DilemmaRoundResult | null;
+  geetPrompt: GeetPrompt | null;
+  geetResponses: GeetResponsePublic[] | null;
+  geetVotedIds: string[];
+  geetResult: GeetRoundResult | null;
   winnerIds: string[];
   createdAt: number;
   updatedAt: number;

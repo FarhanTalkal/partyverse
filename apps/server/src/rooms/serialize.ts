@@ -40,8 +40,20 @@ export function toPublicRoom(room: InternalRoom): PublicRoom {
     chaosResult: room.chaosResult,
     bluffScenario: room.bluffScenario,
     bluffReveal: room.bluffReveal,
+    bluffReadyIds: [...room.bluffReady],
     mindPrompt: room.mindPrompt,
     mindResult: room.mindResult,
+    dilemmaPrompt: room.dilemmaPrompt,
+    dilemmaVotedIds: [...room.dilemmaVotes.keys()],
+    dilemmaResult: room.dilemmaResult,
+    geetPrompt: room.geetPrompt,
+    geetResponses: room.geetResponses,
+    geetVotedIds: [
+      ...new Set(
+        [...room.geetSubmissions.values()].flatMap((s) => [...s.votes])
+      ),
+    ],
+    geetResult: room.geetResult,
     winnerIds: room.winnerIds,
     createdAt: room.createdAt,
     updatedAt: room.updatedAt,

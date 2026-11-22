@@ -9,8 +9,13 @@ import type {
   ChaosResponsePublic,
   ChaosRoundResult,
   ChatMessage,
+  DilemmaPrompt,
+  DilemmaRoundResult,
   GameMode,
   GameSettings,
+  GeetPrompt,
+  GeetResponsePublic,
+  GeetRoundResult,
   MindPrompt,
   MindRoundResult,
   RoomState,
@@ -48,6 +53,13 @@ export interface MindSubmission {
   submittedAt: number;
 }
 
+export interface GeetSubmission {
+  id: string;
+  playerId: string;
+  text: string;
+  votes: Set<string>;
+}
+
 export interface InternalRoom {
   code: string;
   state: RoomState;
@@ -76,10 +88,19 @@ export interface InternalRoom {
   bluffPrivate: Map<string, BluffPrivateInfo>;
   bluffCulpritId: string | null;
   bluffVotes: Map<string, string>;
+  bluffReady: Set<string>;
   bluffReveal: BluffReveal | null;
   mindPrompt: MindPrompt | null;
   mindSubmissions: Map<string, MindSubmission>;
   mindResult: MindRoundResult | null;
+  dilemmaPrompt: DilemmaPrompt | null;
+  dilemmaVotes: Map<string, 0 | 1>;
+  dilemmaResult: DilemmaRoundResult | null;
+  geetPrompt: GeetPrompt | null;
+  geetSubmissions: Map<string, GeetSubmission>;
+  geetResponses: GeetResponsePublic[] | null;
+  geetResult: GeetRoundResult | null;
+  geetPhase: "respond" | "vote" | null;
   winnerIds: string[];
 }
 
