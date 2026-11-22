@@ -252,7 +252,36 @@ export function registerHandlers(
     socket.on(SOCKET_EVENTS.GAME_START, async () => {
       const room = getAuthorizedRoom(socket, store);
       if (!room || !socket.data.playerId) return;
+      const sendPrivate = (playerId: string, privateInfo: unknown) => {
+        const player = room.players.get(playerId);
+        if (player?.socketId) {
+          io.to(player.socketId).emit(SOCKET_EVENTS.PRIVATE_BLUFF, privateInfo);
+        }
+      };
       const result = await rooms.startGame(
+        room,
+        socket.data.playerId,
+        broadcast,
+        sendPrivate
+      );
+      if ("error" in result) {
+        if (result.error === "NOT_READY") {
+          const names = result.notReadyNames?.join(", ") || "some players";
+          emitError(
+            socket,
+            "NOT_READY",
+            `Everyone must ready up first. Waiting on: ${names}`
+          );
+          return;
+        }
+        emitError(socket, result.error!, "Cannot start game");
+      }
+    });
+
+    socket.on(SOCKET_EVENTS.GAME_HOWTO_ACK, () => {
+      const room = getAuthorizedRoom(socket, store);
+      if (!room || !socket.data.playerId) return;
+      const result = rooms.ackHowto(
         room,
         socket.data.playerId,
         broadcast,
@@ -264,7 +293,7 @@ export function registerHandlers(
         }
       );
       if ("error" in result) {
-        emitError(socket, result.error!, "Cannot start game");
+        emitError(socket, result.error!, "Cannot acknowledge instructions");
       }
     });
 

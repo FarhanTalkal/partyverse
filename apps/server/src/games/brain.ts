@@ -20,9 +20,15 @@ export const brainController: GameController = {
     transition(room, "PREPARING_ROUND");
     broadcast(room);
 
+    // Rotate difficulty each round so medium-default rooms don't loop the same subset
+    const cycle = (["easy", "medium", "hard"] as const)[room.roundIndex % 3];
+    const difficulty =
+      room.settings.brain.category === "random"
+        ? cycle
+        : room.settings.brain.difficulty;
     const q = await generateBrainQuestion({
       category: room.settings.brain.category,
-      difficulty: room.settings.brain.difficulty,
+      difficulty,
       usedIds: room.usedQuestionIds,
     });
     room.usedQuestionIds.add(q.id);

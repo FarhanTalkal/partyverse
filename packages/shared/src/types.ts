@@ -231,6 +231,12 @@ export interface GeetRoundResult {
   leaderboard: LeaderboardEntry[];
 }
 
+export interface HowToBriefing {
+  mode: GameMode;
+  endsAt: number;
+  ackedIds: string[];
+}
+
 export interface PublicRoom {
   code: string;
   state: RoomState;
@@ -239,6 +245,7 @@ export interface PublicRoom {
   chat: ChatMessage[];
   selectedMode: GameMode | null;
   settings: GameSettings | null;
+  howto: HowToBriefing | null;
   roundIndex: number;
   totalRounds: number;
   brainQuestion: BrainPublicQuestion | null;

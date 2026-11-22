@@ -12,18 +12,22 @@ import { defaultSettingsFor } from "@/lib/modes";
 
 export function GameSelect({
   playerCount,
+  readyCount,
   onSelect,
   onStart,
   selectedMode,
   preferredMode,
   disabled,
+  notReadyNames = [],
 }: {
   playerCount: number;
+  readyCount: number;
   selectedMode: GameMode | null;
   preferredMode?: GameMode | null;
   onSelect: (payload: Record<string, unknown>) => void;
   onStart: () => void;
   disabled?: boolean;
+  notReadyNames?: string[];
 }) {
   const [mode, setMode] = useState<GameMode>(
     selectedMode ?? preferredMode ?? "brain"
@@ -71,9 +75,20 @@ export function GameSelect({
           Best with {BLUFF_RECOMMENDED_MIN}+ players. Smaller rooms still work.
         </p>
       )}
+      <p className="mt-3 text-sm text-slate">
+        Ready {readyCount}/{playerCount}
+        {notReadyNames.length > 0
+          ? ` · waiting on ${notReadyNames.join(", ")}`
+          : ""}
+      </p>
       <Button className="mt-4 w-full" disabled={disabled} onClick={onStart}>
         Start {GAME_MODE_META[mode].name}
       </Button>
+      {disabled && notReadyNames.length > 0 && (
+        <p className="mt-2 text-sm text-coral">
+          Everyone must tap Ready up before you can start.
+        </p>
+      )}
     </div>
   );
 }

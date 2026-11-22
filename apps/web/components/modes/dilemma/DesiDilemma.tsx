@@ -1,7 +1,7 @@
 "use client";
 
 import { SOCKET_EVENTS, type PublicRoom } from "@partyverse/shared";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Leaderboard } from "@/components/game/Leaderboard";
 import { TimerBar } from "@/components/game/TimerBar";
@@ -17,6 +17,11 @@ export function DesiDilemma({
 }) {
   const [picked, setPicked] = useState(false);
   const prompt = room.dilemmaPrompt;
+
+  // Reset local lock when a new prompt / round arrives
+  useEffect(() => {
+    setPicked(false);
+  }, [prompt?.id, room.roundIndex]);
 
   if (room.state === "ROUND_RESULTS" && room.dilemmaResult) {
     const result = room.dilemmaResult;
@@ -68,7 +73,7 @@ export function DesiDilemma({
       <div className="grid gap-3 sm:grid-cols-2">
         {prompt.options.map((option, index) => (
           <Button
-            key={option}
+            key={`${prompt.id}-${index}`}
             className="h-auto whitespace-normal py-4 text-left"
             variant={already ? "ghost" : "primary"}
             disabled={already}

@@ -51,6 +51,8 @@ export class RoomService {
       chat: [],
       selectedMode: null,
       settings: null,
+      howtoEndsAt: null,
+      howtoAcked: new Set(),
       roundIndex: 0,
       totalRounds: 0,
       createdAt: now,
@@ -269,7 +271,13 @@ export class RoomService {
     hostId: string,
     broadcast: (r: InternalRoom) => void,
     sendPrivate: (playerId: string, payload: unknown) => void
-  ): Promise<{ error: "UNAUTHORIZED" | "INVALID_STATE" | "MIN_PLAYERS" } | { ok: true }> {
+  ): Promise<
+    | {
+        error: "UNAUTHORIZED" | "INVALID_STATE" | "MIN_PLAYERS" | "NOT_READY";
+        notReadyNames?: string[];
+      }
+    | { ok: true }
+  > {
     if (room.hostId !== hostId) return { error: "UNAUTHORIZED" };
     if (room.state !== "GAME_SELECTION" && room.state !== "WAITING") {
       return { error: "INVALID_STATE" };
@@ -280,13 +288,20 @@ export class RoomService {
     const connected = [...room.players.values()].filter((p) => p.connected);
     if (connected.length < MIN_PLAYERS) return { error: "MIN_PLAYERS" };
 
+    const notReady = connected.filter((p) => !p.ready);
+    if (notReady.length > 0) {
+      return {
+        error: "NOT_READY",
+        notReadyNames: notReady.map((p) => p.nickname),
+      };
+    }
+
     for (const p of room.players.values()) {
       p.score = 0;
       p.ready = false;
     }
     room.roundIndex = 0;
     room.winnerIds = [];
-    // Keep usedQuestionIds across games in this room for more variety
     room.brainResult = null;
     room.chaosResult = null;
     room.bluffReveal = null;
@@ -296,28 +311,85 @@ export class RoomService {
 
     if (room.settings.mode === "brain") {
       room.totalRounds = room.settings.brain.rounds;
-      await brainController.startRound(room, broadcast);
     } else if (room.settings.mode === "chaos") {
       room.totalRounds = room.settings.chaos.rounds;
-      await chaosController.startRound(room, broadcast);
     } else if (room.settings.mode === "mind") {
       room.totalRounds = room.settings.mind.rounds;
-      await mindController.startRound(room, broadcast);
     } else if (room.settings.mode === "dilemma") {
       room.totalRounds = room.settings.dilemma.rounds;
-      await dilemmaController.startRound(room, broadcast);
     } else if (room.settings.mode === "geet") {
       room.totalRounds = room.settings.geet.rounds;
-      await geetController.startRound(room, broadcast);
     } else {
       room.totalRounds = 1;
+    }
+
+    // Shared how-to briefing before first round
+    room.howtoAcked = new Set();
+    room.howtoEndsAt = Date.now() + 30_000;
+    transition(room, "PREPARING_ROUND");
+    broadcast(room);
+
+    clearTimer(room);
+    room.timer = setTimeout(() => {
+      void this.beginGameplay(room, broadcast, sendPrivate);
+    }, 30_000);
+
+    return { ok: true };
+  }
+
+  ackHowto(
+    room: InternalRoom,
+    playerId: string,
+    broadcast: (r: InternalRoom) => void,
+    sendPrivate: (playerId: string, payload: unknown) => void
+  ): { error: "INVALID_STATE" } | { ok: true; started: boolean } {
+    if (!room.howtoEndsAt || room.state !== "PREPARING_ROUND") {
+      return { error: "INVALID_STATE" };
+    }
+    room.howtoAcked.add(playerId);
+    room.updatedAt = Date.now();
+    const connected = [...room.players.values()].filter((p) => p.connected);
+    const allAcked =
+      connected.length > 0 &&
+      connected.every((p) => room.howtoAcked.has(p.id));
+    broadcast(room);
+    if (allAcked) {
+      clearTimer(room);
+      void this.beginGameplay(room, broadcast, sendPrivate);
+      return { ok: true, started: true };
+    }
+    return { ok: true, started: false };
+  }
+
+  private async beginGameplay(
+    room: InternalRoom,
+    broadcast: (r: InternalRoom) => void,
+    sendPrivate: (playerId: string, payload: unknown) => void
+  ) {
+    if (!room.settings || !room.selectedMode) return;
+    // Only start once from howto (timer or unanimous ack)
+    if (!room.howtoEndsAt || room.state !== "PREPARING_ROUND") return;
+    room.howtoEndsAt = null;
+    room.howtoAcked = new Set();
+    clearTimer(room);
+
+    if (room.settings.mode === "brain") {
+      await brainController.startRound(room, broadcast);
+    } else if (room.settings.mode === "chaos") {
+      await chaosController.startRound(room, broadcast);
+    } else if (room.settings.mode === "mind") {
+      await mindController.startRound(room, broadcast);
+    } else if (room.settings.mode === "dilemma") {
+      await dilemmaController.startRound(room, broadcast);
+    } else if (room.settings.mode === "geet") {
+      await geetController.startRound(room, broadcast);
+    } else {
       await bluffController.startRound(room, broadcast);
       for (const player of room.players.values()) {
         const info = getPrivateBluff(room, player.id);
         if (info) sendPrivate(player.id, info);
       }
     }
-    return { ok: true };
   }
 
   private resetGameplay(room: InternalRoom) {
@@ -328,6 +400,8 @@ export class RoomService {
     }
     room.selectedMode = null;
     room.settings = null;
+    room.howtoEndsAt = null;
+    room.howtoAcked = new Set();
     room.roundIndex = 0;
     room.totalRounds = 0;
     room.brainQuestion = null;

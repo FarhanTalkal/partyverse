@@ -171,6 +171,8 @@ export function BluffBetray({
           </p>
           <ChatPanel
             messages={room.chat}
+            players={room.players}
+            selfId={playerId}
             onSend={(text) => emit(SOCKET_EVENTS.CHAT_SEND, { text })}
           />
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">

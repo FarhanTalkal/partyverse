@@ -1,7 +1,7 @@
 "use client";
 
 import { SOCKET_EVENTS, type PublicRoom } from "@partyverse/shared";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Leaderboard } from "@/components/game/Leaderboard";
@@ -20,6 +20,13 @@ export function GeetRound({
   const [submitted, setSubmitted] = useState(false);
   const [voted, setVoted] = useState(false);
   const prompt = room.geetPrompt;
+
+  // Reset input/locks whenever a new round prompt starts
+  useEffect(() => {
+    setText("");
+    setSubmitted(false);
+    setVoted(false);
+  }, [prompt?.id, room.roundIndex]);
 
   if (room.state === "ROUND_RESULTS" && room.geetResult) {
     return (
@@ -72,11 +79,13 @@ export function GeetRound({
       {!voting && (
         <div className="flex flex-col gap-3 sm:flex-row">
           <Input
+            key={`geet-input-${prompt.id}`}
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder={`Starts with ${prompt.letter}…`}
             maxLength={80}
             disabled={submitted}
+            autoFocus
           />
           <Button
             disabled={submitted || text.trim().length < 1}
@@ -99,7 +108,9 @@ export function GeetRound({
             <Button
               key={r.id}
               variant="ghost"
-              disabled={voted || (playerId ? room.geetVotedIds.includes(playerId) : false)}
+              disabled={
+                voted || (playerId ? room.geetVotedIds.includes(playerId) : false)
+              }
               onClick={() => {
                 setVoted(true);
                 emit(SOCKET_EVENTS.GEET_VOTE, {

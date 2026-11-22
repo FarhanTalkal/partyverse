@@ -68,6 +68,8 @@ export interface InternalRoom {
   chat: ChatMessage[];
   selectedMode: GameMode | null;
   settings: GameSettings | null;
+  howtoEndsAt: number | null;
+  howtoAcked: Set<string>;
   roundIndex: number;
   totalRounds: number;
   createdAt: number;

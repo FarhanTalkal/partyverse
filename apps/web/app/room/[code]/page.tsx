@@ -13,6 +13,7 @@ import { ChatPanel } from "@/components/lobby/ChatPanel";
 import { GameSelect } from "@/components/lobby/GameSelect";
 import { PlayerList } from "@/components/lobby/PlayerList";
 import { GameResults } from "@/components/game/GameResults";
+import { HowToBriefingPanel } from "@/components/game/HowToBriefing";
 import { BrainBattle } from "@/components/modes/brain/BrainBattle";
 import { ChaosChallenge } from "@/components/modes/chaos/ChaosChallenge";
 import { BluffBetray } from "@/components/modes/bluff/BluffBetray";
@@ -180,9 +181,16 @@ export default function RoomPage() {
   }
 
   const inLobby = room.state === "WAITING" || room.state === "GAME_SELECTION";
-  const inGame = ["PREPARING_ROUND", "IN_PROGRESS", "ROUND_RESULTS"].includes(
-    room.state
+  const howtoActive = Boolean(room.howto);
+  const inGame =
+    !howtoActive &&
+    ["PREPARING_ROUND", "IN_PROGRESS", "ROUND_RESULTS"].includes(room.state);
+  const notReadyPlayers = room.players.filter(
+    (p) => p.connected && !p.ready
   );
+  const allReady =
+    room.players.filter((p) => p.connected).length >= 2 &&
+    notReadyPlayers.length === 0;
   const canSwitch =
     isHost &&
     [
@@ -312,7 +320,16 @@ export default function RoomPage() {
           </div>
         )}
 
-        {room.state === "GAME_RESULTS" && (
+        {howtoActive && room.howto && (
+          <HowToBriefingPanel
+            howto={room.howto}
+            playerId={playerId}
+            connectedCount={room.players.filter((p) => p.connected).length}
+            emit={emit}
+          />
+        )}
+
+        {room.state === "GAME_RESULTS" && !howtoActive && (
           <div className="space-y-4">
             {room.selectedMode === "bluff" && room.bluffReveal ? (
               <BluffBetray
@@ -331,7 +348,7 @@ export default function RoomPage() {
           </div>
         )}
 
-        {(inLobby || inGame) && (
+        {(inLobby || inGame) && !howtoActive && (
           <div
             className={
               inLobby
@@ -406,16 +423,23 @@ export default function RoomPage() {
                   )}
                   {isHost ? (
                     <GameSelect
-                      playerCount={room.players.length}
+                      playerCount={
+                        room.players.filter((p) => p.connected).length
+                      }
+                      readyCount={
+                        room.players.filter((p) => p.connected && p.ready)
+                          .length
+                      }
                       selectedMode={room.selectedMode}
                       preferredMode={preferredMode}
+                      notReadyNames={notReadyPlayers.map((p) => p.nickname)}
                       onSelect={(payload) =>
                         emit(SOCKET_EVENTS.GAME_SELECT, payload)
                       }
                       onStart={() => emit(SOCKET_EVENTS.GAME_START)}
                       disabled={
                         room.players.filter((p) => p.connected).length <
-                        MIN_PLAYERS
+                          MIN_PLAYERS || !allReady
                       }
                     />
                   ) : (
@@ -500,6 +524,8 @@ export default function RoomPage() {
               ) && (
                 <ChatPanel
                   messages={room.chat}
+                  players={room.players}
+                  selfId={playerId}
                   onSend={(text) => emit(SOCKET_EVENTS.CHAT_SEND, { text })}
                 />
               )}

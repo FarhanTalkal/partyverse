@@ -167,6 +167,32 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         setChatNotice(`${message.nickname}: ${message.text}`);
         if (chatNoticeTimer.current) clearTimeout(chatNoticeTimer.current);
         chatNoticeTimer.current = setTimeout(() => setChatNotice(null), 4500);
+        // Soft notification chime (skip own messages)
+        try {
+          const Ctx =
+            window.AudioContext ||
+            (window as unknown as { webkitAudioContext: typeof AudioContext })
+              .webkitAudioContext;
+          if (Ctx) {
+            const ctx = new Ctx();
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = 880;
+            g.gain.value = 0.0001;
+            osc.connect(g);
+            g.connect(ctx.destination);
+            const t = ctx.currentTime;
+            g.gain.exponentialRampToValueAtTime(0.08, t + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+            osc.frequency.exponentialRampToValueAtTime(1320, t + 0.18);
+            osc.start(t);
+            osc.stop(t + 0.3);
+            window.setTimeout(() => void ctx.close(), 400);
+          }
+        } catch {
+          /* ignore audio failures */
+        }
       }
     };
     const onPrivate = (info: BluffPrivateInfo) => setPrivateBluff(info);

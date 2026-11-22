@@ -77,7 +77,7 @@ export function LandingPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.16 }}
-            className="mt-4 text-sm text-slate sm:whitespace-nowrap sm:text-base md:text-lg"
+            className="mt-4 text-sm font-medium text-ink/75 sm:whitespace-nowrap sm:text-base md:text-lg"
           >
             Create a room, share a code, and play together.
           </motion.p>

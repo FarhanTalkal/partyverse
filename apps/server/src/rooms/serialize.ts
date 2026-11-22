@@ -26,6 +26,14 @@ export function toPublicRoom(room: InternalRoom): PublicRoom {
     chat: room.chat.slice(-50),
     selectedMode: room.selectedMode,
     settings: room.settings,
+    howto:
+      room.howtoEndsAt && room.selectedMode
+        ? {
+            mode: room.selectedMode,
+            endsAt: room.howtoEndsAt,
+            ackedIds: [...room.howtoAcked],
+          }
+        : null,
     roundIndex: room.roundIndex,
     totalRounds: room.totalRounds,
     brainQuestion: room.brainQuestion,

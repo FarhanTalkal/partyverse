@@ -26,24 +26,27 @@ function pickCurated(
   difficulty: Difficulty,
   used: Set<string>
 ): CuratedBrainQuestion {
-  // Reset cycle once most of the bank is spent so rooms don't feel stuck
-  if (used.size >= Math.floor(BRAIN_BANK.length * 0.85)) {
+  // Prefer never-seen IDs; only recycle after the curated bank is exhausted
+  const unusedAny = BRAIN_BANK.filter((q) => !used.has(q.id));
+  if (unusedAny.length === 0) {
     used.clear();
   }
-  const unusedAny = BRAIN_BANK.filter((q) => !used.has(q.id));
-  const unusedCategory = unusedAny.filter(
+  const pool = unusedAny.length > 0 ? unusedAny : BRAIN_BANK;
+  const unusedCategory = pool.filter(
     (q) => category === "random" || q.category === category
   );
-  const unusedExact = unusedCategory.filter((q) => q.difficulty === difficulty);
-  // Prefer unused overall (variety) over strict difficulty match
+  // For "random", ignore difficulty so rounds don't collapse to the same medium subset
   const source =
-    unusedExact.length >= 2
-      ? unusedExact
-      : unusedCategory.length > 0
+    category === "random"
+      ? unusedCategory.length > 0
         ? unusedCategory
-        : unusedAny.length > 0
-          ? unusedAny
-          : BRAIN_BANK;
+        : pool
+      : (() => {
+          const exact = unusedCategory.filter((q) => q.difficulty === difficulty);
+          if (exact.length > 0) return exact;
+          if (unusedCategory.length > 0) return unusedCategory;
+          return pool;
+        })();
   return shuffle(source)[0];
 }
 
@@ -52,7 +55,12 @@ export async function generateBrainQuestion(params: {
   difficulty: Difficulty;
   usedIds: Set<string>;
 }): Promise<CuratedBrainQuestion> {
+  // Prefer curated unused questions so sessions don't repeat; AI only near bank exhaustion
   const curated = pickCurated(params.category, params.difficulty, params.usedIds);
+  const usedCount = params.usedIds.size;
+  if (usedCount < BRAIN_BANK.length * 0.9) {
+    return curated;
+  }
 
   const ai = await aiProvider.completeJson<{
     type: "multiple_choice" | "text";
@@ -90,7 +98,9 @@ export async function generateBrainQuestion(params: {
     id: `ai-${Date.now()}`,
     type: q.type,
     category:
-      params.category === "random" ? curated.category : (params.category as CuratedBrainQuestion["category"]),
+      params.category === "random"
+        ? curated.category
+        : (params.category as CuratedBrainQuestion["category"]),
     difficulty: params.difficulty,
     prompt: q.prompt,
     options: q.options,
