@@ -18,9 +18,22 @@ const scenarioSchema = z.object({
   roles: z.array(roleSchema).min(4).max(8),
 });
 
-function pickScenario(playerCount: number): CuratedBluffScenario {
-  const suitable = BLUFF_BANK.filter((s) => s.roles.length >= playerCount);
-  const pool = suitable.length ? suitable : BLUFF_BANK;
+function pickScenario(
+  playerCount: number,
+  usedIds: Set<string>
+): CuratedBluffScenario {
+  const suitable = BLUFF_BANK.filter(
+    (s) => s.roles.length >= playerCount && !usedIds.has(s.id)
+  );
+  const unused = BLUFF_BANK.filter((s) => !usedIds.has(s.id));
+  const pool =
+    suitable.length > 0
+      ? suitable
+      : unused.length > 0
+        ? unused
+        : BLUFF_BANK.filter((s) => s.roles.length >= playerCount).length
+          ? BLUFF_BANK.filter((s) => s.roles.length >= playerCount)
+          : BLUFF_BANK;
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -42,9 +55,10 @@ function validateConsistency(scenario: CuratedBluffScenario, playerCount: number
 }
 
 export async function generateBluffScenario(
-  playerCount: number
+  playerCount: number,
+  usedIds: Set<string> = new Set()
 ): Promise<CuratedBluffScenario> {
-  const curated = pickScenario(playerCount);
+  const curated = pickScenario(playerCount, usedIds);
 
   const ai = await aiProvider.completeJson<z.infer<typeof scenarioSchema>>({
     system:

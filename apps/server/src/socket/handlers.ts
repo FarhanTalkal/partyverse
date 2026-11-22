@@ -7,6 +7,7 @@ import {
   chatSendSchema,
   createRoomSchema,
   gameSelectSchema,
+  hostTransferSchema,
   joinRoomSchema,
   mindAnswerSchema,
   readySchema,
@@ -164,6 +165,32 @@ export function registerHandlers(
       const parsed = readySchema.safeParse(payload);
       if (!parsed.success) return;
       rooms.setReady(room, socket.data.playerId, parsed.data.ready);
+      broadcast(room);
+    });
+
+    socket.on(SOCKET_EVENTS.HOST_TRANSFER, (payload) => {
+      const room = getAuthorizedRoom(socket, store);
+      if (!room || !socket.data.playerId) return;
+      const parsed = hostTransferSchema.safeParse(payload);
+      if (!parsed.success) {
+        emitError(socket, "INVALID_PAYLOAD", "Invalid host transfer");
+        return;
+      }
+      const result = rooms.transferHost(
+        room,
+        socket.data.playerId,
+        parsed.data.targetPlayerId
+      );
+      if ("error" in result) {
+        emitError(
+          socket,
+          result.error!,
+          result.error === "UNAUTHORIZED"
+            ? "Only the host can transfer host"
+            : "Pick a connected player to make host"
+        );
+        return;
+      }
       broadcast(room);
     });
 

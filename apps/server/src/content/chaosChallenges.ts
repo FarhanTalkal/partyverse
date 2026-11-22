@@ -68,4 +68,56 @@ export const CHAOS_BANK: CuratedChaosChallenge[] = [
     type: "creative",
     prompt: "Pitch a reality show set in a Mumbai local train in one sentence.",
   },
+  {
+    id: "in-cc-13",
+    type: "would_you_rather",
+    prompt: "Would you rather always get the window seat on trains or always get free platform chai?",
+    options: ["Always window seat", "Always free chai"],
+  },
+  {
+    id: "in-cc-14",
+    type: "hypothetical",
+    prompt: "Your family WhatsApp group makes you admin. What is your first rule?",
+  },
+  {
+    id: "in-cc-15",
+    type: "popular",
+    prompt: "What is the ultimate rainy-day comfort food in India?",
+  },
+  {
+    id: "in-cc-16",
+    type: "creative",
+    prompt: "Design a new IPL team mascot in one sentence.",
+  },
+  {
+    id: "in-cc-17",
+    type: "vote",
+    prompt: "Which Indian festival has the best snacks?",
+  },
+  {
+    id: "in-cc-18",
+    type: "would_you_rather",
+    prompt: "Would you rather live next to a noisy wedding lawn or a 24/7 construction site?",
+    options: ["Wedding lawn", "Construction site"],
+  },
+  {
+    id: "in-cc-19",
+    type: "hypothetical",
+    prompt: "You can add one item to every thali in India forever. What is it?",
+  },
+  {
+    id: "in-cc-20",
+    type: "popular",
+    prompt: "Best road trip snack that never fails?",
+  },
+  {
+    id: "in-cc-21",
+    type: "creative",
+    prompt: "Write a movie title for a comedy about neighbors fighting over parking.",
+  },
+  {
+    id: "in-cc-22",
+    type: "vote",
+    prompt: "Which is more chaotic: airport security or railway reservation counters?",
+  },
 ];

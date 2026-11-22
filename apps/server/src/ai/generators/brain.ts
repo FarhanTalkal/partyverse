@@ -17,14 +17,20 @@ function pickCurated(
   difficulty: Difficulty,
   used: Set<string>
 ): CuratedBrainQuestion {
-  const pool = BRAIN_BANK.filter(
+  const unusedMatching = BRAIN_BANK.filter(
     (q) =>
       !used.has(q.id) &&
       q.difficulty === difficulty &&
       (category === "random" || q.category === category)
   );
-  const fallback = BRAIN_BANK.filter((q) => !used.has(q.id));
-  const source = pool.length ? pool : fallback.length ? fallback : BRAIN_BANK;
+  const unusedAny = BRAIN_BANK.filter((q) => !used.has(q.id));
+  // Prefer unused questions; only recycle after the bank is exhausted
+  const source =
+    unusedMatching.length > 0
+      ? unusedMatching
+      : unusedAny.length > 0
+        ? unusedAny
+        : BRAIN_BANK;
   return source[Math.floor(Math.random() * source.length)];
 }
 

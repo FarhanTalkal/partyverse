@@ -15,6 +15,7 @@ import { AvatarPicker } from "@/components/ui/AvatarPicker";
 import { Button } from "@/components/ui/Button";
 import { ConnectionPill } from "@/components/ui/ConnectionPill";
 import { Input } from "@/components/ui/Input";
+import { MusicToggle } from "@/components/ui/MusicProvider";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useGameSocket } from "@/hooks/useGameSocket";
 import { loadProfile, saveProfile } from "@/lib/session";
@@ -40,12 +41,11 @@ function SetupInner() {
 
   useEffect(() => {
     const profile = loadProfile();
+    // Never prefill nickname — always type fresh (placeholder guides the user)
+    setNickname("");
     if (inviteJoin) {
-      // Invitees must pick their own avatar (no default / saved avatar)
       setAvatar(null);
-      if (profile?.nickname) setNickname(profile.nickname);
-    } else if (profile) {
-      setNickname(profile.nickname);
+    } else if (profile?.avatar) {
       setAvatar(profile.avatar);
     }
     if (joinCode) setCode(joinCode);
@@ -108,6 +108,7 @@ function SetupInner() {
             PartyVerse
           </Link>
           <div className="flex items-center gap-2">
+            <MusicToggle />
             <ThemeToggle />
             <ConnectionPill status={connectionStatus} onRetry={retryConnect} />
           </div>
@@ -135,7 +136,7 @@ function SetupInner() {
             <Input
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              placeholder="Farhan"
+              placeholder="Type your name here"
               maxLength={16}
               autoFocus
             />

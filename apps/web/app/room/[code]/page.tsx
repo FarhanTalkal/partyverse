@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   GAME_MODE_META,
   GAME_MODES,
@@ -19,10 +19,11 @@ import { BluffBetray } from "@/components/modes/bluff/BluffBetray";
 import { MindMatch } from "@/components/modes/mind/MindMatch";
 import { Button } from "@/components/ui/Button";
 import { ConnectionPill } from "@/components/ui/ConnectionPill";
+import { MusicToggle, useMusic } from "@/components/ui/MusicProvider";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useGameSocket } from "@/hooks/useGameSocket";
 import { defaultSettingsFor, inviteUrl, loadPreferredMode } from "@/lib/modes";
-import { loadMembership } from "@/lib/session";
+import { loadMembership, loadProfile } from "@/lib/session";
 
 export default function RoomPage() {
   const params = useParams<{ code: string }>();
@@ -34,12 +35,16 @@ export default function RoomPage() {
     reconnecting,
     error,
     privateBluff,
+    chatNotice,
+    clearChatNotice,
     emit,
     leaveRoom,
     retryReconnect,
     retryConnect,
     createRoom,
+    joinRoom,
   } = useGameSocket();
+  const { setMode: setMusicMode } = useMusic();
 
   const code = (params.code || "").toUpperCase();
   const preferredMode = useMemo(() => loadPreferredMode(), []);
@@ -47,12 +52,39 @@ export default function RoomPage() {
   const [retrying, setRetrying] = useState(false);
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
   const [shareHint, setShareHint] = useState<string | null>(null);
+  const [rejoining, setRejoining] = useState(false);
 
   const self = useMemo(
     () => room?.players.find((p) => p.id === playerId),
     [room, playerId]
   );
   const isHost = self?.isHost ?? false;
+  const inGameEarly = room
+    ? ["PREPARING_ROUND", "IN_PROGRESS", "ROUND_RESULTS"].includes(room.state)
+    : false;
+
+  useEffect(() => {
+    setMusicMode(inGameEarly ? "game" : "lobby");
+  }, [inGameEarly, setMusicMode]);
+
+  async function rejoinSeat() {
+    setRejoining(true);
+    try {
+      const ok = await retryReconnect();
+      if (ok) return;
+      const profile = loadProfile();
+      if (!profile) {
+        router.push(`/setup?code=${code}`);
+        return;
+      }
+      const res = await joinRoom(code, profile.nickname, profile.avatar);
+      router.replace(`/room/${res.room.code}`);
+    } catch {
+      router.push(`/setup?code=${code}`);
+    } finally {
+      setRejoining(false);
+    }
+  }
 
   if (reconnecting && !room) {
     return (
@@ -129,8 +161,15 @@ export default function RoomPage() {
             >
               Create new room
             </Button>
-            <Link href="/join">
-              <Button variant="ghost">Join room</Button>
+            <Button
+              variant="secondary"
+              disabled={rejoining}
+              onClick={() => void rejoinSeat()}
+            >
+              {rejoining ? "Rejoining…" : "Rejoin this room"}
+            </Button>
+            <Link href={`/setup?code=${code}`}>
+              <Button variant="ghost">Join with new name</Button>
             </Link>
           </div>
         </div>
@@ -225,6 +264,7 @@ export default function RoomPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <MusicToggle />
             <ThemeToggle />
             {canSwitch && (
               <Button size="sm" variant="secondary" onClick={switchMode}>
@@ -244,10 +284,30 @@ export default function RoomPage() {
           </div>
         </header>
 
+        {chatNotice && (
+          <button
+            type="button"
+            onClick={clearChatNotice}
+            className="mb-4 w-full rounded-2xl border border-teal/40 bg-teal/15 px-4 py-3 text-left text-sm text-ink shadow-soft"
+          >
+            <span className="font-bold text-teal">New message · </span>
+            {chatNotice}
+          </button>
+        )}
+
         {error && (
           <p className="mb-4 rounded-2xl bg-coral/15 px-4 py-3 text-sm text-coral">
             {error}
           </p>
+        )}
+
+        {self && !self.connected && (
+          <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-amber/40 bg-amber/10 px-4 py-3 text-sm text-ink">
+            <span>You look away from the room — tap rejoin to restore your seat.</span>
+            <Button size="sm" disabled={rejoining} onClick={() => void rejoinSeat()}>
+              {rejoining ? "Rejoining…" : "Rejoin"}
+            </Button>
+          </div>
         )}
 
         {room.state === "GAME_RESULTS" && (
@@ -282,7 +342,15 @@ export default function RoomPage() {
                 <h2 className="mb-3 font-display text-xl font-bold text-ink">
                   Players
                 </h2>
-                <PlayerList players={room.players} selfId={playerId} />
+                <PlayerList
+                  players={room.players}
+                  selfId={playerId}
+                  isHost={isHost}
+                  onMakeHost={(id) =>
+                    emit(SOCKET_EVENTS.HOST_TRANSFER, { targetPlayerId: id })
+                  }
+                  onRejoin={() => void rejoinSeat()}
+                />
                 <Button
                   className="mt-4 w-full"
                   variant={self?.ready ? "secondary" : "primary"}
@@ -303,8 +371,10 @@ export default function RoomPage() {
                       Lobby
                     </h2>
                     <p className="mt-2 text-slate">
-                      {room.players.length}/8 players · need at least {MIN_PLAYERS}{" "}
-                      for multiplayer (or Practice solo)
+                      {room.players.length}/8 players
+                      {room.players.filter((p) => p.connected).length < MIN_PLAYERS
+                        ? ` · need at least ${MIN_PLAYERS} to start a group game`
+                        : " · group ready"}
                     </p>
                   </div>
                   {isHost && (
@@ -370,16 +440,9 @@ export default function RoomPage() {
                             key={m}
                             className="rounded-xl bg-[var(--surface-strong)] px-3 py-2"
                           >
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-sm font-semibold text-ink">
-                                {GAME_MODE_META[m].name}
-                              </p>
-                              {(m === "brain" || m === "mind") && (
-                                <span className="rounded-full bg-teal/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal">
-                                  Solo
-                                </span>
-                              )}
-                            </div>
+                            <p className="text-sm font-semibold text-ink">
+                              {GAME_MODE_META[m].name}
+                            </p>
                             <p className="text-xs text-slate">
                               {GAME_MODE_META[m].tagline}
                             </p>
@@ -425,13 +488,23 @@ export default function RoomPage() {
                   <PlayerList
                     players={[...room.players].sort((a, b) => b.score - a.score)}
                     selfId={playerId}
+                    isHost={isHost}
+                    onMakeHost={(id) =>
+                      emit(SOCKET_EVENTS.HOST_TRANSFER, { targetPlayerId: id })
+                    }
+                    onRejoin={() => void rejoinSeat()}
                   />
                 </div>
               )}
-              <ChatPanel
-                messages={room.chat}
-                onSend={(text) => emit(SOCKET_EVENTS.CHAT_SEND, { text })}
-              />
+              {!(
+                room.selectedMode === "bluff" &&
+                room.bluffScenario?.phase === "discussion"
+              ) && (
+                <ChatPanel
+                  messages={room.chat}
+                  onSend={(text) => emit(SOCKET_EVENTS.CHAT_SEND, { text })}
+                />
+              )}
             </aside>
           </div>
         )}

@@ -178,7 +178,9 @@ export class RoomService {
         id: idAlphabet(),
         playerId: "system",
         nickname: "PartyVerse",
-        text: `${nickname} left the game`,
+        text: permanent
+          ? `${nickname} left the game`
+          : `${nickname} stepped away`,
         createdAt: Date.now(),
       });
       if (room.chat.length > 100) room.chat = room.chat.slice(-100);
@@ -206,6 +208,29 @@ export class RoomService {
     if (room.state !== "WAITING" && room.state !== "GAME_SELECTION") return;
     player.ready = ready;
     room.updatedAt = Date.now();
+  }
+
+  transferHost(
+    room: InternalRoom,
+    hostId: string,
+    targetPlayerId: string
+  ): { error: "UNAUTHORIZED" | "INVALID_TARGET" } | { ok: true } {
+    if (room.hostId !== hostId) return { error: "UNAUTHORIZED" };
+    const target = room.players.get(targetPlayerId);
+    if (!target || !target.connected || targetPlayerId === hostId) {
+      return { error: "INVALID_TARGET" };
+    }
+    room.hostId = targetPlayerId;
+    room.updatedAt = Date.now();
+    room.chat.push({
+      id: idAlphabet(),
+      playerId: "system",
+      nickname: "PartyVerse",
+      text: `${target.nickname} is now the host`,
+      createdAt: Date.now(),
+    });
+    if (room.chat.length > 100) room.chat = room.chat.slice(-100);
+    return { ok: true };
   }
 
   selectGame(
@@ -254,7 +279,7 @@ export class RoomService {
     }
     room.roundIndex = 0;
     room.winnerIds = [];
-    room.usedQuestionIds = new Set();
+    // Keep usedQuestionIds across games in this room for more variety
     room.brainResult = null;
     room.chaosResult = null;
     room.bluffReveal = null;
@@ -312,7 +337,6 @@ export class RoomService {
     room.mindPrompt = null;
     room.mindResult = null;
     room.mindSubmissions = new Map();
-    room.usedQuestionIds = new Set();
     room.winnerIds = [];
   }
 

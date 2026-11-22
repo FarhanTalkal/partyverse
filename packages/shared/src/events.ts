@@ -17,6 +17,7 @@ export const SOCKET_EVENTS = {
   ROOM_RECONNECT: "room:reconnect",
   PLAYER_READY: "player:ready",
   PLAYER_UPDATE: "player:update",
+  HOST_TRANSFER: "host:transfer",
   CHAT_SEND: "chat:send",
   GAME_SELECT: "game:select",
   GAME_START: "game:start",
@@ -77,6 +78,10 @@ export const updatePlayerSchema = z.object({
   avatar: avatarSchema.optional(),
 });
 
+export const hostTransferSchema = z.object({
+  targetPlayerId: z.string().min(8).max(64),
+});
+
 export const chatSendSchema = z.object({
   text: z.string().trim().min(1).max(CHAT_MAX_LENGTH),
 });
@@ -96,7 +101,8 @@ export const chaosSettingsSchema = z.object({
 });
 
 export const bluffSettingsSchema = z.object({
-  discussionTimeMs: z.number().int().min(30000).max(180000).default(60000),
+  readingTimeMs: z.number().int().min(15000).max(120000).default(45000),
+  discussionTimeMs: z.number().int().min(30000).max(180000).default(90000),
   voteTimeMs: z.number().int().min(15000).max(60000).default(30000),
 });
 

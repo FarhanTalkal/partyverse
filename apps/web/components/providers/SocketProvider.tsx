@@ -40,6 +40,8 @@ interface GameSocketValue {
   error: string | null;
   setError: (msg: string | null) => void;
   privateBluff: BluffPrivateInfo | null;
+  chatNotice: string | null;
+  clearChatNotice: () => void;
   createRoom: (nickname: string, avatar: string) => Promise<RoomJoinSuccess>;
   joinRoom: (
     code: string,
@@ -67,8 +69,11 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [privateBluff, setPrivateBluff] = useState<BluffPrivateInfo | null>(
     null
   );
+  const [chatNotice, setChatNotice] = useState<string | null>(null);
   const membershipRef = useRef<Membership | null>(null);
+  const playerIdRef = useRef<string | null>(null);
   const connectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chatNoticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const attemptReconnect = useCallback(async (m: Membership): Promise<boolean> => {
     const socket = getSocket();
@@ -87,6 +92,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
             if (res?.room) {
               setRoom(res.room);
               setPlayerId(res.playerId);
+              playerIdRef.current = res.playerId;
               if (res.privateBluff) setPrivateBluff(res.privateBluff);
               setError(null);
               resolve(true);
@@ -154,8 +160,28 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       setRoom((prev) =>
         prev ? { ...prev, chat: [...prev.chat.slice(-49), message] } : prev
       );
+      if (
+        message.playerId !== "system" &&
+        message.playerId !== playerIdRef.current
+      ) {
+        setChatNotice(`${message.nickname}: ${message.text}`);
+        if (chatNoticeTimer.current) clearTimeout(chatNoticeTimer.current);
+        chatNoticeTimer.current = setTimeout(() => setChatNotice(null), 4500);
+      }
     };
     const onPrivate = (info: BluffPrivateInfo) => setPrivateBluff(info);
+
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      membershipRef.current = loadMembership();
+      if (!socket.connected) {
+        setConnectionStatus("connecting");
+        socket.connect();
+        return;
+      }
+      const m = membershipRef.current;
+      if (m) void attemptReconnect(m);
+    };
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
@@ -164,6 +190,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     socket.on(SOCKET_EVENTS.ROOM_ERROR, onError);
     socket.on(SOCKET_EVENTS.CHAT_MESSAGE, onChat);
     socket.on(SOCKET_EVENTS.PRIVATE_BLUFF, onPrivate);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onVisibility);
 
     setConnectionStatus("connecting");
     connectTimer.current = setTimeout(() => {
@@ -175,6 +203,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
     return () => {
       if (connectTimer.current) clearTimeout(connectTimer.current);
+      if (chatNoticeTimer.current) clearTimeout(chatNoticeTimer.current);
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("connect_error", onConnectError);
@@ -182,6 +211,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       socket.off(SOCKET_EVENTS.ROOM_ERROR, onError);
       socket.off(SOCKET_EVENTS.CHAT_MESSAGE, onChat);
       socket.off(SOCKET_EVENTS.PRIVATE_BLUFF, onPrivate);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onVisibility);
     };
   }, [attemptReconnect]);
 
@@ -195,6 +226,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     saveMembership(membership);
     setRoom(data.room);
     setPlayerId(data.playerId);
+    playerIdRef.current = data.playerId;
     setPrivateBluff(data.privateBluff ?? null);
     setError(null);
   }, []);
@@ -276,6 +308,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     membershipRef.current = null;
     setRoom(null);
     setPlayerId(null);
+    playerIdRef.current = null;
     setPrivateBluff(null);
     setError(null);
   }, []);
@@ -283,6 +316,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const emit = useCallback((event: string, payload?: unknown) => {
     getSocket().emit(event, payload);
   }, []);
+
+  const clearChatNotice = useCallback(() => setChatNotice(null), []);
 
   const retryReconnect = useCallback(async () => {
     const m = membershipRef.current ?? loadMembership();
@@ -332,6 +367,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       error,
       setError,
       privateBluff,
+      chatNotice,
+      clearChatNotice,
       createRoom,
       joinRoom,
       leaveRoom,
@@ -347,6 +384,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       playerId,
       error,
       privateBluff,
+      chatNotice,
+      clearChatNotice,
       createRoom,
       joinRoom,
       leaveRoom,

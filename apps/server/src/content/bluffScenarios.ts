@@ -145,4 +145,122 @@ export const BLUFF_BANK: CuratedBluffScenario[] = [
       },
     ],
   },
+  {
+    id: "bl-in-3",
+    title: "The Vanishing Cricket Trophy",
+    synopsis:
+      "After a corporate gully-cricket final, the tiny silver trophy disappeared from the pavilion table during the victory selfies. Music blasted, golgappe arrived, and someone slipped away with glory in their bag.",
+    publicClues: [
+      "A team jersey was found stuffed behind the drinks cooler.",
+      "The DJ playlist skipped right as the group photo started.",
+      "Wet footprints lead from the pitch to the parking scooter stand.",
+      "Someone paid for extra paneer rolls in cash and left no name.",
+    ],
+    roles: [
+      {
+        role: "Winning Captain",
+        background: "You lifted the trophy first and passed it for photos.",
+        secretObjective: "Recover the trophy without blaming your own side unfairly.",
+        privateClues: ["You last saw it in the hands of someone wearing a spare bib."],
+        isCulprit: false,
+      },
+      {
+        role: "Rival Opener",
+        background: "You lost the final and hung near the pavilion sulking.",
+        secretObjective: "You took the trophy for 'insurance'. Don't get caught.",
+        privateClues: [
+          "You hid it under the spare pads in your kit bag.",
+          "You asked the DJ to play a loud track as cover.",
+        ],
+        isCulprit: true,
+      },
+      {
+        role: "Umpire Uncle",
+        background: "You volunteered as umpire and knew every argument.",
+        secretObjective: "Settle this fairly before HR gets involved.",
+        privateClues: ["You noticed a scooter helmet with mud matching the pitch."],
+        isCulprit: false,
+      },
+      {
+        role: "Snack Sponsor",
+        background: "You brought rolls and soft drinks for both teams.",
+        secretObjective: "Prove you never left the food table.",
+        privateClues: ["The cash for extra rolls was left by someone in a blue bib."],
+        isCulprit: false,
+      },
+      {
+        role: "Team Photographer",
+        background: "You shot the victory selfies and checked the burst mode.",
+        secretObjective: "Find visual proof without starting a fight.",
+        privateClues: ["One frame shows a kit bag zipping shut behind the cooler."],
+        isCulprit: false,
+      },
+      {
+        role: "Scorer Intern",
+        background: "You kept the scorebook and sat by the pavilion table.",
+        secretObjective: "Protect your notebook and your reputation.",
+        privateClues: ["You stepped away for 90 seconds to refill water."],
+        isCulprit: false,
+      },
+    ],
+  },
+  {
+    id: "bl-in-4",
+    title: "Office Fridge Conspiracy",
+    synopsis:
+      "In a Bengaluru startup kitchen, someone's labeled biryani vanished at 2:07pm. Slack lit up, the microwave beeped twice, and trust among teammates hit an all-time low.",
+    publicClues: [
+      "The fridge door was left ajar and the light stayed on.",
+      "A spicy aroma trailed toward the phone booths.",
+      "Someone's access badge tapped the pantry twice in one minute.",
+      "An empty takeaway box was found in the recycling with no sticker.",
+    ],
+    roles: [
+      {
+        role: "Hungry PM",
+        background: "You skipped breakfast after a standup marathon.",
+        secretObjective: "You ate the biryani. Act normal.",
+        privateClues: [
+          "You wiped the label and tossed the box downstairs.",
+          "You used a teammate's badge joke-swipe earlier that looked real on logs.",
+        ],
+        isCulprit: true,
+      },
+      {
+        role: "Office Manager",
+        background: "You run pantry supplies and fridge rules.",
+        secretObjective: "Find the culprit before the next all-hands.",
+        privateClues: ["The double badge tap came from the design pod side."],
+        isCulprit: false,
+      },
+      {
+        role: "Backend Dev",
+        background: "You live in the phone booths during deploys.",
+        secretObjective: "Clear your name — you only smell of coffee.",
+        privateClues: ["You saw someone hurry past with a steel spoon at 2:05."],
+        isCulprit: false,
+      },
+      {
+        role: "Designer",
+        background: "You were near the pantry moodboarding lunch posts.",
+        secretObjective: "Help solve it without roasting anyone publicly.",
+        privateClues: ["The empty box had a faint turmeric fingerprint on the lid."],
+        isCulprit: false,
+      },
+      {
+        role: "Intern",
+        background: "You just joined and fear fridge politics.",
+        secretObjective: "Survive onboarding and learn who did it.",
+        privateClues: ["You overheard 'don't tell Slack' near the microwave."],
+        isCulprit: false,
+      },
+      {
+        role: "QA Lead",
+        background: "You document everything, including snack crimes.",
+        secretObjective: "Collect consistent stories from everyone.",
+        privateClues: ["Access logs show a badge alias that isn't in HR yet."],
+        isCulprit: false,
+      },
+    ],
+  },
 ];

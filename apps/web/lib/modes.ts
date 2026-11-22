@@ -10,7 +10,11 @@ export function defaultSettingsFor(mode: GameMode, practice = false) {
   if (mode === "bluff") {
     return {
       mode: "bluff" as const,
-      bluff: { discussionTimeMs: 60000, voteTimeMs: 30000 },
+      bluff: {
+        readingTimeMs: 45000,
+        discussionTimeMs: 90000,
+        voteTimeMs: 30000,
+      },
     };
   }
   if (mode === "mind") {

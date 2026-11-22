@@ -31,7 +31,10 @@ export function saveProfile(profile: PlayerProfile) {
 export function loadMembership(): Membership | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem(MEMBERSHIP_KEY);
+    // Prefer localStorage so switching apps/tabs doesn't drop the seat
+    const raw =
+      localStorage.getItem(MEMBERSHIP_KEY) ??
+      sessionStorage.getItem(MEMBERSHIP_KEY);
     return raw ? (JSON.parse(raw) as Membership) : null;
   } catch {
     return null;
@@ -39,9 +42,11 @@ export function loadMembership(): Membership | null {
 }
 
 export function saveMembership(membership: Membership) {
+  localStorage.setItem(MEMBERSHIP_KEY, JSON.stringify(membership));
   sessionStorage.setItem(MEMBERSHIP_KEY, JSON.stringify(membership));
 }
 
 export function clearMembership() {
+  localStorage.removeItem(MEMBERSHIP_KEY);
   sessionStorage.removeItem(MEMBERSHIP_KEY);
 }

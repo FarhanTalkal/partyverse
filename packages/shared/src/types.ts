@@ -39,6 +39,7 @@ export interface ChaosSettings {
 }
 
 export interface BluffSettings {
+  readingTimeMs: number;
   discussionTimeMs: number;
   voteTimeMs: number;
 }
@@ -124,6 +125,8 @@ export interface BluffPublicScenario {
   synopsis: string;
   phase: "briefing" | "discussion" | "voting" | "reveal";
   publicClues: string[];
+  phaseStartedAt?: number;
+  briefingEndsAt?: number;
   discussionEndsAt?: number;
   voteEndsAt?: number;
 }

@@ -61,6 +61,26 @@ function reveal(room: InternalRoom, broadcast: BroadcastFn) {
   broadcast(room);
 }
 
+function beginDiscussion(
+  room: InternalRoom,
+  broadcast: BroadcastFn,
+  discussionMs: number
+) {
+  if (!room.settings || room.settings.mode !== "bluff" || !room.bluffScenario) {
+    return;
+  }
+  const now = Date.now();
+  room.bluffScenario = {
+    ...room.bluffScenario,
+    phase: "discussion",
+    phaseStartedAt: now,
+    discussionEndsAt: now + discussionMs,
+  };
+  broadcast(room);
+  clearTimer(room);
+  room.timer = setTimeout(() => beginVoting(room, broadcast), discussionMs);
+}
+
 function beginVoting(room: InternalRoom, broadcast: BroadcastFn) {
   if (!room.settings || room.settings.mode !== "bluff" || !room.bluffScenario) {
     return;
@@ -70,6 +90,7 @@ function beginVoting(room: InternalRoom, broadcast: BroadcastFn) {
   room.bluffScenario = {
     ...room.bluffScenario,
     phase: "voting",
+    phaseStartedAt: now,
     voteEndsAt: now + room.settings.bluff.voteTimeMs,
   };
   broadcast(room);
@@ -84,7 +105,11 @@ export const bluffController: GameController = {
     broadcast(room);
 
     const players = [...room.players.values()];
-    const scenario = await generateBluffScenario(players.length);
+    const scenario = await generateBluffScenario(
+      players.length,
+      room.usedQuestionIds
+    );
+    if (scenario.id) room.usedQuestionIds.add(scenario.id);
     const roles = shuffle(scenario.roles).slice(0, players.length);
     // Ensure exactly one culprit in assigned set
     if (!roles.some((r) => r.isCulprit)) {
@@ -122,14 +147,17 @@ export const bluffController: GameController = {
       if (role.isCulprit) room.bluffCulpritId = player.id;
     });
 
+    const readingMs = room.settings.bluff.readingTimeMs ?? 45_000;
+    const discussionMs = room.settings.bluff.discussionTimeMs;
     const now = Date.now();
     room.bluffScenario = {
       id: scenario.id || nanoid(8),
       title: scenario.title,
       synopsis: scenario.synopsis,
-      phase: "discussion",
+      phase: "briefing",
       publicClues: scenario.publicClues,
-      discussionEndsAt: now + room.settings.bluff.discussionTimeMs,
+      phaseStartedAt: now,
+      briefingEndsAt: now + readingMs,
     };
 
     transition(room, "IN_PROGRESS");
@@ -138,8 +166,8 @@ export const bluffController: GameController = {
 
     clearTimer(room);
     room.timer = setTimeout(() => {
-      beginVoting(room, broadcast);
-    }, room.settings.bluff.discussionTimeMs);
+      beginDiscussion(room, broadcast, discussionMs);
+    }, readingMs);
   },
 
   async endRound(room, broadcast) {

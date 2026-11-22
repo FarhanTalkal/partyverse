@@ -6,6 +6,7 @@ import { GAME_MODE_META, GAME_MODES, type GameMode } from "@partyverse/shared";
 import { Button } from "@/components/ui/Button";
 import { Footer } from "@/components/ui/Footer";
 import { Section } from "@/components/ui/Section";
+import { MusicToggle } from "@/components/ui/MusicProvider";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { savePreferredMode } from "@/lib/modes";
@@ -24,6 +25,10 @@ const modeAccent: Record<GameMode, string> = {
 };
 
 const soloModes = new Set<GameMode>(["brain", "mind"]);
+const browseOrder: GameMode[] = [
+  ...GAME_MODES.filter((m) => soloModes.has(m)),
+  ...GAME_MODES.filter((m) => !soloModes.has(m)),
+];
 
 export function LandingPage() {
   const router = useRouter();
@@ -35,6 +40,7 @@ export function LandingPage() {
           PartyVerse
         </p>
         <div className="flex shrink-0 items-center gap-2">
+          <MusicToggle />
           <ThemeToggle />
           <Button
             size="sm"
@@ -116,8 +122,9 @@ export function LandingPage() {
           Start any game — hosts can switch anytime.
         </p>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
-          {GAME_MODES.map((mode, i) => {
+          {browseOrder.map((mode, i) => {
             const meta = GAME_MODE_META[mode];
+            const solo = soloModes.has(mode);
             return (
               <motion.article
                 key={mode}
@@ -129,9 +136,9 @@ export function LandingPage() {
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="inline-flex rounded-full bg-ink/5 px-3 py-1 text-xs font-semibold text-ink dark:bg-white/10">
-                    Mode {String.fromCharCode(65 + i)}
+                    {solo ? "Solo" : "Multiplayer"}
                   </span>
-                  {soloModes.has(mode) && (
+                  {solo && (
                     <span className="inline-flex rounded-full bg-teal/15 px-3 py-1 text-xs font-bold text-teal">
                       Solo OK
                     </span>

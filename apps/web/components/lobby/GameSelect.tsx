@@ -4,6 +4,7 @@ import {
   BLUFF_RECOMMENDED_MIN,
   GAME_MODE_META,
   GAME_MODES,
+  MIN_PLAYERS,
   type GameMode,
 } from "@partyverse/shared";
 import { useEffect, useState } from "react";
@@ -30,6 +31,7 @@ export function GameSelect({
   const [mode, setMode] = useState<GameMode>(
     selectedMode ?? preferredMode ?? "brain"
   );
+  const groupPlay = playerCount >= MIN_PLAYERS;
 
   useEffect(() => {
     const initial = selectedMode ?? preferredMode ?? "brain";
@@ -53,48 +55,34 @@ export function GameSelect({
     setTimeout(() => onStart(), 80);
   }
 
-  const canPractice = mode === "brain" || mode === "mind";
+  const canPractice = !groupPlay && (mode === "brain" || mode === "mind");
 
   return (
     <div className="rounded-[1.5rem] pv-card p-4">
       <h3 className="font-display text-xl font-bold text-ink">Pick a mode</h3>
       <p className="mt-1 text-sm text-slate">
-        Start with friends, or practice Brain / Mind alone.
+        {groupPlay
+          ? "Choose a mode for the group."
+          : "Invite friends, or practice Brain / Mind alone."}
       </p>
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
-        {GAME_MODES.map((id) => {
-          const solo = id === "brain" || id === "mind";
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => choose(id)}
-              className={`rounded-2xl px-4 py-3 text-left transition ${
-                mode === id
-                  ? "bg-coral text-white shadow-glow"
-                  : "bg-[var(--surface-strong)] text-ink hover:brightness-105"
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold">{GAME_MODE_META[id].name}</p>
-                {solo && (
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                      mode === id
-                        ? "bg-white/20 text-white"
-                        : "bg-teal/15 text-teal"
-                    }`}
-                  >
-                    Solo
-                  </span>
-                )}
-              </div>
-              <p className={`mt-1 text-xs ${mode === id ? "text-white/85" : "text-slate"}`}>
-                {GAME_MODE_META[id].tagline}
-              </p>
-            </button>
-          );
-        })}
+        {GAME_MODES.map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => choose(id)}
+            className={`rounded-2xl px-4 py-3 text-left transition ${
+              mode === id
+                ? "bg-coral text-white shadow-glow"
+                : "bg-[var(--surface-strong)] text-ink hover:brightness-105"
+            }`}
+          >
+            <p className="font-semibold">{GAME_MODE_META[id].name}</p>
+            <p className={`mt-1 text-xs ${mode === id ? "text-white/85" : "text-slate"}`}>
+              {GAME_MODE_META[id].tagline}
+            </p>
+          </button>
+        ))}
       </div>
       {mode === "bluff" && playerCount < BLUFF_RECOMMENDED_MIN && (
         <p className="mt-3 text-sm text-amber">

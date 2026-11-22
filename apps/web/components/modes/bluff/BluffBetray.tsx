@@ -9,6 +9,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Leaderboard } from "@/components/game/Leaderboard";
 import { TimerBar } from "@/components/game/TimerBar";
+import { ChatPanel } from "@/components/lobby/ChatPanel";
+import { cn } from "@/lib/cn";
+
+const PHASE_LABEL: Record<string, string> = {
+  briefing: "Reading time",
+  discussion: "Discussion time",
+  voting: "Voting",
+  reveal: "Reveal",
+};
 
 export function BluffBetray({
   room,
@@ -37,17 +46,38 @@ export function BluffBetray({
     return (
       <div className="space-y-4 rounded-[1.75rem] bg-panel-wash p-6 shadow-soft">
         <h2 className="font-display text-2xl font-bold">Reveal</h2>
-        <p>
+        <p className="text-lg">
           The culprit was{" "}
-          <span className="font-semibold text-coral">{reveal.culpritNickname}</span>.
+          <span className="rounded-lg bg-coral/20 px-2 py-0.5 font-extrabold text-coral">
+            {reveal.culpritNickname}
+          </span>
+          .
         </p>
         <ul className="space-y-2">
-          {reveal.roles.map((r) => (
-            <li key={r.playerId} className="rounded-2xl bg-white/80 px-4 py-2">
-              <span className="font-semibold">{r.nickname}</span>
-              <span className="text-slate"> — {r.role}</span>
-            </li>
-          ))}
+          {reveal.roles.map((r) => {
+            const isCulprit = r.playerId === reveal.culpritPlayerId;
+            return (
+              <li
+                key={r.playerId}
+                className={cn(
+                  "rounded-2xl px-4 py-3",
+                  isCulprit
+                    ? "border-2 border-coral bg-coral/15 shadow-glow"
+                    : "bg-white/80 dark:bg-white/10"
+                )}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-ink">{r.nickname}</span>
+                  {isCulprit && (
+                    <span className="rounded-full bg-coral px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                      Culprit
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm text-slate">{r.role}</span>
+              </li>
+            );
+          })}
         </ul>
         <Leaderboard entries={reveal.leaderboard} />
       </div>
@@ -62,37 +92,49 @@ export function BluffBetray({
     );
   }
 
+  const phaseStarted = scenario.phaseStartedAt ?? Date.now() - 1000;
+
   return (
     <div className="space-y-5">
       <div className="rounded-[1.75rem] bg-panel-wash p-6 shadow-soft">
-        <p className="text-sm font-semibold uppercase tracking-wide text-slate">
-          {scenario.phase}
+        <p className="text-sm font-semibold uppercase tracking-wide text-amber">
+          {PHASE_LABEL[scenario.phase] ?? scenario.phase}
         </p>
         <h2 className="mt-2 font-display text-3xl font-bold tracking-tight">
           {scenario.title}
         </h2>
         <p className="mt-3 text-slate">{scenario.synopsis}</p>
-        <ul className="mt-4 space-y-2">
-          {scenario.publicClues.map((clue) => (
-            <li key={clue} className="rounded-2xl bg-white/80 px-4 py-3 text-sm">
-              {clue}
-            </li>
-          ))}
-        </ul>
+
+        <div className="mt-5">
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-slate">
+            Case clues · not choices
+          </p>
+          <ul className="space-y-2 border-l-2 border-amber/50 pl-4">
+            {scenario.publicClues.map((clue, i) => (
+              <li key={clue} className="text-sm leading-relaxed text-ink">
+                <span className="mr-2 font-bold text-amber">{i + 1}.</span>
+                {clue}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {scenario.phase === "briefing" && scenario.briefingEndsAt && (
+          <div className="mt-4">
+            <p className="mb-2 text-sm text-slate">
+              Read the case and your private brief. Chat unlocks in discussion.
+            </p>
+            <TimerBar startedAt={phaseStarted} endsAt={scenario.briefingEndsAt} />
+          </div>
+        )}
         {scenario.phase === "discussion" && scenario.discussionEndsAt && (
           <div className="mt-4">
-            <TimerBar
-              startedAt={scenario.discussionEndsAt - 60000}
-              endsAt={scenario.discussionEndsAt}
-            />
+            <TimerBar startedAt={phaseStarted} endsAt={scenario.discussionEndsAt} />
           </div>
         )}
         {scenario.phase === "voting" && scenario.voteEndsAt && (
           <div className="mt-4">
-            <TimerBar
-              startedAt={scenario.voteEndsAt - 30000}
-              endsAt={scenario.voteEndsAt}
-            />
+            <TimerBar startedAt={phaseStarted} endsAt={scenario.voteEndsAt} />
           </div>
         )}
       </div>
@@ -119,6 +161,18 @@ export function BluffBetray({
         </div>
       )}
 
+      {scenario.phase === "discussion" && (
+        <div className="rounded-[1.75rem] border border-teal/30 bg-teal/5 p-4">
+          <p className="mb-3 text-sm font-semibold text-ink">
+            Discussion is open — chat with the group. Clues stay visible above.
+          </p>
+          <ChatPanel
+            messages={room.chat}
+            onSend={(text) => emit(SOCKET_EVENTS.CHAT_SEND, { text })}
+          />
+        </div>
+      )}
+
       {scenario.phase === "voting" && (
         <div className="rounded-[1.75rem] bg-panel-wash p-6 shadow-soft">
           <h3 className="font-display text-xl font-bold">Who is the culprit?</h3>
@@ -141,12 +195,6 @@ export function BluffBetray({
           </div>
           {voted && <p className="mt-3 text-sm font-semibold text-teal">Vote locked.</p>}
         </div>
-      )}
-
-      {scenario.phase === "discussion" && (
-        <p className="text-center text-sm text-slate">
-          Discuss in chat. Additional pressure builds until voting begins.
-        </p>
       )}
     </div>
   );
